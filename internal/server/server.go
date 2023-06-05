@@ -22,10 +22,8 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	pathSlice := make([]string, 3)
-	pathSlice = strings.Split(u.Path, "/")
-
-	if len(pathSlice) == 1 && pathSlice[0] != "gauge" && pathSlice[0] != "counter" {
+	pathSlice := strings.Split(u.Path, "/")
+	if pathSlice[0] != "gauge" && pathSlice[0] != "counter" {
 		http.Error(w, "wrong metric type", http.StatusBadRequest)
 		return
 	}
