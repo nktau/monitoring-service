@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (self *httpApi) update(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -39,7 +39,7 @@ func (self *httpApi) update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "wrong metric value", http.StatusBadRequest)
 			return
 		}
-		self.app.UpdateGauge(pathSlice[1], value)
+		api.app.UpdateGauge(pathSlice[1], value)
 	}
 	if pathSlice[0] == "counter" {
 		value, err := strconv.ParseInt(pathSlice[2], 10, 64)
@@ -47,6 +47,6 @@ func (self *httpApi) update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "wrong metric value", http.StatusBadRequest)
 			return
 		}
-		self.app.UpdateCounter(pathSlice[1], value)
+		api.app.UpdateCounter(pathSlice[1], value)
 	}
 }

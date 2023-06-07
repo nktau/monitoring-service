@@ -7,12 +7,10 @@ import (
 )
 
 func main() {
+	// create storage layer
 	storeLayer := storagelayer.New()
-
 	// create app layer
 	appLayer := applayer.New(storeLayer)
-
 	// create http layer
 	httplayer.New(appLayer)
-
 }

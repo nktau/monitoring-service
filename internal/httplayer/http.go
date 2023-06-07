@@ -6,17 +6,17 @@ import (
 	"net/http"
 )
 
-type httpApi struct {
+type httpAPI struct {
 	app applayer.App
 }
 
 func New(appLayer applayer.App) {
-	api := httpApi{app: appLayer}
+	api := httpAPI{app: appLayer}
 	api.setupRoutesAndStart()
 }
 
-func (self httpApi) setupRoutesAndStart() {
-	http.Handle("/update/", http.HandlerFunc(self.update))
+func (api httpAPI) setupRoutesAndStart() {
+	http.Handle("/update/", http.HandlerFunc(api.update))
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 
 }
