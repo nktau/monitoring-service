@@ -1,4 +1,4 @@
-package server
+package httplayer
 
 import (
 	"log"
@@ -8,10 +8,8 @@ import (
 	"strings"
 )
 
-var storage = NewMemStorage()
-
-func updateHandler(w http.ResponseWriter, r *http.Request) {
-	// http.Error or not?
+func (self *httpApi) update(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -19,9 +17,9 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	u, err := url.Parse(strings.TrimPrefix(r.URL.Path, "/update/"))
 	if err != nil {
 		log.Fatal(err)
+		// to do add 500 error
 		return
 	}
-	w.Header().Set("Content-Type", "text/plain")
 	pathSlice := strings.Split(u.Path, "/")
 	if pathSlice[0] != "gauge" && pathSlice[0] != "counter" {
 		http.Error(w, "wrong metric type", http.StatusBadRequest)
@@ -41,20 +39,14 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "wrong metric value", http.StatusBadRequest)
 			return
 		}
-		storage.ModifyGauge(pathSlice[1], value)
+		self.app.UpdateGauge(pathSlice[1], value)
 	}
 	if pathSlice[0] == "counter" {
 		value, err := strconv.ParseInt(pathSlice[2], 10, 64)
 		if err != nil {
 			http.Error(w, "wrong metric value", http.StatusBadRequest)
 			return
-		} else {
-			storage.ModifyCounter(pathSlice[1], value)
 		}
+		self.app.UpdateCounter(pathSlice[1], value)
 	}
-}
-
-func StartServer() {
-	http.Handle("/update/", http.HandlerFunc(updateHandler))
-	http.ListenAndServe("localhost:8080", nil)
 }
