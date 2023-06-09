@@ -12,6 +12,6 @@ func main() {
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpApi := httplayer.New(appLayer)
-	httpApi.SetupRoutesAndStart()
+	httpAPI := httplayer.New(appLayer)
+	httpAPI.SetupRoutesAndStart()
 }
