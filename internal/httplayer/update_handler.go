@@ -49,4 +49,5 @@ func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 		}
 		api.app.UpdateCounter(pathSlice[1], value)
 	}
+	w.Write([]byte("ok\n"))
 }

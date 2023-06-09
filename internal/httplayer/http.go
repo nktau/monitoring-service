@@ -10,12 +10,11 @@ type httpAPI struct {
 	app applayer.App
 }
 
-func New(appLayer applayer.App) {
-	api := httpAPI{app: appLayer}
-	api.setupRoutesAndStart()
+func New(appLayer applayer.App) httpAPI {
+	return httpAPI{app: appLayer}
 }
 
-func (api httpAPI) setupRoutesAndStart() {
+func (api httpAPI) SetupRoutesAndStart() {
 	http.Handle("/update/", http.HandlerFunc(api.update))
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 
