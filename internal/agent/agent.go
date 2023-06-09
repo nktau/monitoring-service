@@ -18,7 +18,7 @@ func New() memStorage {
 }
 
 func (mem *memStorage) TriggerGetRuntimeMetric(pollInterval int) {
-	for true {
+	for {
 		if mem.counter%5 == 0 {
 			mem.SendRuntimeMetric()
 		}
@@ -29,17 +29,19 @@ func (mem *memStorage) TriggerGetRuntimeMetric(pollInterval int) {
 }
 
 func (mem *memStorage) SendRuntimeMetric() {
-	serverUrl := "http://localhost:8080"
+	serverURL := "http://localhost:8080"
 	for _, gauge := range mem.gauge {
 		for metricName, metricValue := range gauge {
-			requestURL := fmt.Sprintf("%s/update/gauge/%s/%f", serverUrl, metricName, metricValue)
+			requestURL := fmt.Sprintf("%s/update/gauge/%s/%f", serverURL, metricName, metricValue)
 			req, err := http.Post(requestURL, "text/plain", nil)
 			if err != nil {
+				req.Body.Close()
 				fmt.Println(err)
 			}
-			fmt.Println(req.StatusCode)
+			req.Body.Close()
 		}
 	}
+
 }
 
 func (mem *memStorage) GetRuntimeMetrics() {

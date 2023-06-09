@@ -27,12 +27,12 @@ func TestUpdate(t *testing.T) {
 	}
 	tests := []struct {
 		name      string
-		targetUrl string
+		targetURL string
 		want      want
 	}{
 		{
 			name:      "#1 positive test gauge",
-			targetUrl: "/update/gauge/randomMetricName/10.5",
+			targetURL: "/update/gauge/randomMetricName/10.5",
 			want: want{
 				code:        200,
 				response:    "ok\n",
@@ -41,7 +41,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name:      "#2 positive test counter",
-			targetUrl: "/update/counter/randomMetricName/10",
+			targetURL: "/update/counter/randomMetricName/10",
 			want: want{
 				code:        200,
 				response:    "ok\n",
@@ -50,7 +50,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name:      "#3 Invalid metric type",
-			targetUrl: "/update/invalidMetricType/randomMetricName/10",
+			targetURL: "/update/invalidMetricType/randomMetricName/10",
 			want: want{
 				code:        http.StatusBadRequest,
 				response:    "wrong metric type\n",
@@ -59,16 +59,16 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name:      "#4 Invalid metric value",
-			targetUrl: "/update/gauge/randomMetricName/invalidValue",
+			targetURL: "/update/gauge/randomMetricName/invalidValue",
 			want: want{
 				code:        http.StatusBadRequest,
 				response:    "wrong metric value\n",
-				contentType: "text/plain; charset=utf-8", // Это норм, что пришлось добавить charset=utf-8?
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
 			name:      "#5 empty metric name",
-			targetUrl: "/update/gauge/",
+			targetURL: "/update/gauge/",
 			want: want{
 				code:        http.StatusNotFound,
 				response:    "wrong metric name\n",
@@ -78,7 +78,7 @@ func TestUpdate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, test.targetUrl, nil)
+			request := httptest.NewRequest(http.MethodPost, test.targetURL, nil)
 			// создаём новый Recorder
 			w := httptest.NewRecorder()
 			httpAPI.update(w, request)
