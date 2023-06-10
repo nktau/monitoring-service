@@ -10,10 +10,6 @@ import (
 
 func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	u, err := url.Parse(strings.TrimPrefix(r.URL.Path, "/update/"))
 	if err != nil {
 		log.Fatal(err)
