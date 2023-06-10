@@ -11,7 +11,8 @@ func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
 	gauge, counter := api.app.GetAll()
 	var s []string
 	for key, value := range gauge {
-		metricValueWithoutTrailingZero := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value), "0"), ".")
+		//to do: create a function
+		metricValueWithoutTrailingZero := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", value), "0"), ".")
 		s = append(s, fmt.Sprintf("<h3>%s: %s</h3>\n", key, metricValueWithoutTrailingZero))
 	}
 	for key, value := range counter {

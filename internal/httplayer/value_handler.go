@@ -35,7 +35,8 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-		metricValueWithoutTrailingZero := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", metricValue), "0"), ".")
+		//to do: create a function
+		metricValueWithoutTrailingZero := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", metricValue), "0"), ".")
 
 		w.Write([]byte(metricValueWithoutTrailingZero + "\n"))
 		return
