@@ -4,7 +4,7 @@ import (
 	"github.com/nktau/monitoring-service/internal/storagelayer"
 )
 
-var MetricNotFound = storagelayer.MetricNotFound
+var ErrMetricNotFound = storagelayer.ErrMetricNotFound
 
 type app struct {
 	store storagelayer.MemStorage

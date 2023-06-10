@@ -27,7 +27,7 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 
 	if pathSlice[0] == "gauge" {
 		metricValue, err := api.app.GetGauge(pathSlice[1])
-		if err == applayer.MetricNotFound {
+		if err == applayer.ErrMetricNotFound {
 			http.Error(w, "metric not found", http.StatusNotFound)
 			return
 		}
@@ -35,13 +35,14 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
-		s := fmt.Sprintf("%f\n", metricValue)
-		w.Write([]byte(s))
+		metricValueWithoutTrailingZero := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", metricValue), "0"), ".")
+
+		w.Write([]byte(metricValueWithoutTrailingZero + "\n"))
 		return
 	}
 	if pathSlice[0] == "counter" {
 		metricValue, err := api.app.GetCounter(pathSlice[1])
-		if err == applayer.MetricNotFound {
+		if err == applayer.ErrMetricNotFound {
 			http.Error(w, "metric not found", http.StatusNotFound)
 			return
 		}

@@ -1,7 +1,6 @@
 package httplayer
 
 import (
-	"fmt"
 	"github.com/nktau/monitoring-service/internal/applayer"
 	"github.com/nktau/monitoring-service/internal/storagelayer"
 	"github.com/stretchr/testify/assert"
@@ -98,19 +97,17 @@ func TestUpdate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			request, err := http.NewRequest(test.httpMethod, ts.URL+test.targetURL, nil)
-			// создаём новый Recorder
-			//w := httptest.NewRecorder()
+			if err != nil {
+				panic("err")
+			}
 			res, err := ts.Client().Do(request)
 			if err != nil {
-				fmt.Println(err)
-				panic("error")
+				panic("err")
 			}
 			defer res.Body.Close()
 			require.NoError(t, err)
-			//res := w.Result()
-			// проверяем код ответа
+
 			assert.Equal(t, res.StatusCode, test.want.code)
-			// получаем и проверяем тело запроса
 			resBody, err := io.ReadAll(res.Body)
 
 			require.NoError(t, err)
