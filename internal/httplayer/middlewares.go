@@ -23,6 +23,7 @@ const contextKeyMetricValue ContextKeyMetricValue = "metricValue"
 
 func validateUpdateValueHandlersRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r)
 		w.Header().Set("Content-Type", "text/plain")
 		urlPathWithoutFirstSlash := strings.TrimLeft(r.URL.Path, "/")
 		pathSlice := strings.Split(urlPathWithoutFirstSlash, "/")
