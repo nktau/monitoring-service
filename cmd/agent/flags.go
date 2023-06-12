@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strconv"
 )
 
 var flagServerURL string
@@ -19,10 +20,16 @@ func parseFlags() {
 		flagServerURL = envServerURL
 	}
 	if envReportInterval := os.Getenv("REPORT_INTERVAL"); envReportInterval != "" {
-		flagServerURL = envReportInterval
+		reportInterval, err := strconv.Atoi(envReportInterval)
+		if err == nil {
+			flagReportInterval = reportInterval
+		}
 	}
 	if envPollInterval := os.Getenv("POLL_INTERVAL"); envPollInterval != "" {
-		flagServerURL = envPollInterval
+		pollInterval, err := strconv.Atoi(envPollInterval)
+		if err == nil {
+			flagPollInterval = pollInterval
+		}
 	}
 
 }
