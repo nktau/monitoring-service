@@ -3,7 +3,6 @@ package httplayer
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -21,11 +20,6 @@ type ContextKeyMetricValue string
 const contextKeyMetricType ContextKeyMetricType = "metricType"
 const contextKeyMetricName ContextKeyMetricName = "metricName"
 const contextKeyMetricValue ContextKeyMetricValue = "metricValue"
-
-const validateErrorValueWrongMetricType = "wrong metric type"
-const validateErrorValueWrongMetricName = "wrong metric name"
-const validateErrorValueWrongMetricValue = "wrong metric value"
-const validateErrorValueNoError = "no error"
 
 func validateUpdateValueHandlersRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -66,6 +60,5 @@ func validateUpdateValueHandlersRequest(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, rWithParsedData)
-		log.Print("Executing middlewareOne again")
 	})
 }

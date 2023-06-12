@@ -28,6 +28,7 @@ func New(appLayer applayer.App) httpAPI {
 	return api
 }
 
-func (api *httpAPI) Start() {
-	http.ListenAndServe("localhost:8080", api.router)
+func (api *httpAPI) Start(addr string) error {
+	err := http.ListenAndServe(addr, api.router)
+	return err
 }

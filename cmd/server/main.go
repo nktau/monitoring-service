@@ -13,6 +13,9 @@ func main() {
 	appLayer := applayer.New(storeLayer)
 	// create http layer
 	httpAPI := httplayer.New(appLayer)
-	httpAPI.Start()
 
+	parseFlags()
+	if err := httpAPI.Start(flagRunAddr); err != nil {
+		panic(err)
+	}
 }

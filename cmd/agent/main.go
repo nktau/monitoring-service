@@ -1,8 +1,12 @@
 package main
 
-import "github.com/nktau/monitoring-service/internal/agent"
+import (
+	"github.com/nktau/monitoring-service/internal/agent"
+)
 
 func main() {
-	store := agent.New()
-	store.TriggerGetRuntimeMetric(2)
+	parseFlags()
+	agent := agent.New()
+	agent.Start("http://"+flagServerURL, flagReportInterval, flagPollInterval)
+
 }
