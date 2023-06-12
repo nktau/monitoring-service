@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 )
 
 var flagServerURL string
@@ -13,5 +14,15 @@ func parseFlags() {
 	flag.IntVar(&flagReportInterval, "r", 10, "frequency of sending metrics to the server in seconds")
 	flag.IntVar(&flagPollInterval, "p", 2, "frequency of polling metrics from the runtime package in seconds")
 	flag.Parse()
+
+	if envServerURL := os.Getenv("ADDRESS"); envServerURL != "" {
+		flagServerURL = envServerURL
+	}
+	if envReportInterval := os.Getenv("REPORT_INTERVAL"); envReportInterval != "" {
+		flagServerURL = envReportInterval
+	}
+	if envPollInterval := os.Getenv("POLL_INTERVAL"); envPollInterval != "" {
+		flagServerURL = envPollInterval
+	}
 
 }
