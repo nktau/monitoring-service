@@ -1,4 +1,4 @@
-package agent
+package app
 
 import (
 	"fmt"
@@ -44,7 +44,6 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 			req.Body.Close()
 		}
 	}
-
 }
 
 func (mem *memStorage) GetRuntimeMetrics() {

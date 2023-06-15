@@ -2,7 +2,7 @@ package httplayer
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/nktau/monitoring-service/internal/applayer"
+	"github.com/nktau/monitoring-service/internal/server/applayer"
 	"net/http"
 )
 

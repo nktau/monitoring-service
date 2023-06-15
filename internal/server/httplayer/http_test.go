@@ -2,8 +2,8 @@ package httplayer
 
 import (
 	"fmt"
-	"github.com/nktau/monitoring-service/internal/applayer"
-	"github.com/nktau/monitoring-service/internal/storagelayer"
+	"github.com/nktau/monitoring-service/internal/server/applayer"
+	"github.com/nktau/monitoring-service/internal/server/storagelayer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -61,7 +61,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        http.StatusBadRequest,
 				response:    "wrong metric type\n",
-				contentType: "text/plain; charset=utf-8", // Это норм, что пришлось добавить charset=utf-8?
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -81,7 +81,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        http.StatusNotFound,
 				response:    "wrong metric name\n",
-				contentType: "text/plain; charset=utf-8", // Это норм, что пришлось добавить charset=utf-8?
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{

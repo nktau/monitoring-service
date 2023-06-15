@@ -1,13 +1,13 @@
 package applayer
 
 import (
-	"github.com/nktau/monitoring-service/internal/storagelayer"
+	storagelayer2 "github.com/nktau/monitoring-service/internal/server/storagelayer"
 )
 
-var ErrMetricNotFound = storagelayer.ErrMetricNotFound
+var ErrMetricNotFound = storagelayer2.ErrMetricNotFound
 
 type app struct {
-	store storagelayer.MemStorage
+	store storagelayer2.MemStorage
 }
 
 type App interface {
@@ -18,6 +18,6 @@ type App interface {
 	GetAll() (map[string]float64, map[string]int64)
 }
 
-func New(store storagelayer.MemStorage) *app {
+func New(store storagelayer2.MemStorage) *app {
 	return &app{store: store}
 }

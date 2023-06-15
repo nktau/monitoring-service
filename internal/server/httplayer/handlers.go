@@ -2,7 +2,7 @@ package httplayer
 
 import (
 	"fmt"
-	"github.com/nktau/monitoring-service/internal/applayer"
+	"github.com/nktau/monitoring-service/internal/server/applayer"
 	"net/http"
 	"strconv"
 	"strings"
