@@ -1,18 +1,29 @@
 package applayer
 
-func (app *app) UpdateCounter(s string, i int64) error {
-	err := app.store.UpdateCounter(s, i)
-	if err != nil {
-		return err
+import (
+	"strconv"
+)
+
+func (app *app) Update(metricType, metricName, metricValue string) error {
+	if metricType == "gauge" {
+		value, err := strconv.ParseFloat(metricValue, 64)
+		if err != nil {
+			return ErrWrongMetricValue
+		}
+		err = app.store.UpdateGauge(metricName, value)
+		if err != nil {
+			return err
+		}
+	}
+	if metricType == "counter" {
+		value, err := strconv.ParseInt(metricValue, 10, 64)
+		if err != nil {
+			return ErrWrongMetricValue
+		}
+		err = app.store.UpdateCounter(metricName, value)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
-}
-
-func (app *app) UpdateGauge(s string, f float64) error {
-	err := app.store.UpdateGauge(s, f)
-	if err != nil {
-		return err
-	}
-	return nil
-
 }

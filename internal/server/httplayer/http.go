@@ -21,9 +21,9 @@ func New(appLayer applayer.App) httpAPI {
 		router: chi.NewRouter(),
 	}
 	// /update/*
-	api.router.Handle("/"+handlePathUpdate+"/*", validateUpdateValueHandlersRequest(http.HandlerFunc(api.update)))
+	api.router.Handle("/"+handlePathUpdate+"/*", setHeaders(http.HandlerFunc(api.update)))
 	// /value/*
-	api.router.Handle("/"+handlePathValue+"/*", validateUpdateValueHandlersRequest(http.HandlerFunc(api.value)))
+	api.router.Handle("/"+handlePathValue+"/*", setHeaders(http.HandlerFunc(api.value)))
 	api.router.Get("/", api.root)
 	return api
 }

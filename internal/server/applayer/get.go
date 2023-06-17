@@ -1,20 +1,23 @@
 package applayer
 
-func (app *app) GetCounter(metricName string) (int64, error) {
-	metricValue, err := app.store.GetCounter(metricName)
-	if err != nil {
-		return -1, err
-	}
-	return metricValue, nil
+import "fmt"
 
-}
-
-func (app *app) GetGauge(metricName string) (float64, error) {
-	metricValue, err := app.store.GetGauge(metricName)
-	if err != nil {
-		return -1, err
+func (app *app) Get(metricType, metricName string) (string, error) {
+	if metricType == "gauge" {
+		metricValue, err := app.store.GetGauge(metricName)
+		if err != nil {
+			return "", err
+		}
+		return metricValueWithoutTrailingZero(metricValue), nil
 	}
-	return metricValue, nil
+	if metricType == "counter" {
+		metricValue, err := app.store.GetCounter(metricName)
+		if err != nil {
+			return "", err
+		}
+		return string(metricValue), nil
+	}
+	return "", fmt.Errorf("uncatched error")
 
 }
 
