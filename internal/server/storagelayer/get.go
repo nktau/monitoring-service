@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-var ErrMetricNotFound = errors.New("metric not found in storage")
+var ErrMetricNotFound = errors.New("metric not found")
 
 func (mem *memStorage) GetCounter(metricName string) (metricValue int64, err error) {
 	value, ok := mem.counter[metricName]
