@@ -24,25 +24,25 @@ type App interface {
 	Update(string, string, string) error
 	Get(string, string) (string, error)
 	GetAll() (map[string]float64, map[string]int64)
-	CommunicateWithHttpLayer(map[string]string) (string, error)
+	CommunicateWithHTTPLayer(map[string]string) (string, error)
 }
 
 func New(store storagelayer.MemStorage) *app {
 	return &app{store: store}
 }
 
-func (app *app) CommunicateWithHttpLayer(requestUrlMap map[string]string) (string, error) {
-	if requestUrlMap["metricType"] != "gauge" && requestUrlMap["metricType"] != "counter" {
+func (app *app) CommunicateWithHTTPLayer(requestURLMap map[string]string) (string, error) {
+	if requestURLMap["metricType"] != "gauge" && requestURLMap["metricType"] != "counter" {
 		return "", ErrWrongMetricType
 	}
-	if requestUrlMap["location"] == "update" {
-		err := app.Update(requestUrlMap["metricType"], requestUrlMap["metricName"], requestUrlMap["metricValue"])
+	if requestURLMap["location"] == "update" {
+		err := app.Update(requestURLMap["metricType"], requestURLMap["metricName"], requestURLMap["metricValue"])
 		if err != nil {
 			return "", err
 		}
 	}
-	if requestUrlMap["location"] == "value" {
-		metricValue, err := app.Get(requestUrlMap["metricType"], requestUrlMap["metricName"])
+	if requestURLMap["location"] == "value" {
+		metricValue, err := app.Get(requestURLMap["metricType"], requestURLMap["metricName"])
 		if err != nil {
 			return "", err
 		}

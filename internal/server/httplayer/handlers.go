@@ -15,44 +15,42 @@ func metricValueWithoutTrailingZero(metricValue float64) string {
 }
 
 func (api *httpAPI) parseAndValidateRequest(r *http.Request) (map[string]string, error) {
-	requestUrlMap := map[string]string{}
+	requestURLMap := map[string]string{}
 	urlPathWithoutFirstSlash := strings.TrimLeft(r.URL.Path, "/")
-	requestUrlSlice := strings.Split(urlPathWithoutFirstSlash, "/")
-	if requestUrlSlice[0] == handlePathUpdate && r.Method != http.MethodPost {
+	requestURLSlice := strings.Split(urlPathWithoutFirstSlash, "/")
+	if requestURLSlice[0] == handlePathUpdate && r.Method != http.MethodPost {
 		return nil, ErrMethodNotAllowed
 	}
-	if requestUrlSlice[0] == handlePathValue && r.Method != http.MethodGet {
+	if requestURLSlice[0] == handlePathValue && r.Method != http.MethodGet {
 		return nil, ErrMethodNotAllowed
 	}
-	requestUrlMap["location"] = requestUrlSlice[0]
+	requestURLMap["location"] = requestURLSlice[0]
 	// check if metric type is empty:
-	if len(requestUrlSlice) < 2 || requestUrlSlice[1] == "" {
-		//ctxWithUser = context.WithValue(r.Context(), validateErrorKey, validateErrorValueWrongMetricType)
+	if len(requestURLSlice) < 2 || requestURLSlice[1] == "" {
 		return nil, applayer.ErrWrongMetricType
 	}
-	requestUrlMap["metricType"] = requestUrlSlice[1]
+	requestURLMap["metricType"] = requestURLSlice[1]
 	//
 	// check if metric name is empty:
-	if len(requestUrlSlice) == 3 && requestUrlSlice[2] == "" || len(requestUrlSlice) == 2 {
-		//ctxWithUser = context.WithValue(r.Context(), validateErrorKey, validateErrorValueWrongMetricName)
+	if len(requestURLSlice) == 3 && requestURLSlice[2] == "" || len(requestURLSlice) == 2 {
 		return nil, applayer.ErrWrongMetricName
 
 	}
-	requestUrlMap["metricName"] = requestUrlSlice[2]
+	requestURLMap["metricName"] = requestURLSlice[2]
 	// check if metric value is empty:
-	if requestUrlSlice[0] == handlePathUpdate && len(requestUrlSlice) < 4 {
-		fmt.Println(requestUrlSlice[0], len(requestUrlSlice))
+	if requestURLSlice[0] == handlePathUpdate && len(requestURLSlice) < 4 {
+		fmt.Println(requestURLSlice[0], len(requestURLSlice))
 		return nil, applayer.ErrWrongMetricValue
 		//ctxWithUser = context.WithValue(r.Context(), validateErrorKey, validateErrorValueWrongMetricName)
 	}
-	if len(requestUrlSlice) >= 4 {
-		requestUrlMap["metricValue"] = requestUrlSlice[3]
+	if len(requestURLSlice) >= 4 {
+		requestURLMap["metricValue"] = requestURLSlice[3]
 	}
-	return requestUrlMap, nil
+	return requestURLMap, nil
 }
 
 func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
-	requestUrlMap, err := api.parseAndValidateRequest(r)
+	requestURLMap, err := api.parseAndValidateRequest(r)
 
 	if err != nil {
 		switch err {
@@ -73,7 +71,7 @@ func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	_, err = api.app.CommunicateWithHttpLayer(requestUrlMap)
+	_, err = api.app.CommunicateWithHTTPLayer(requestURLMap)
 	if err != nil {
 		switch err {
 		case applayer.ErrWrongMetricType:
@@ -94,7 +92,7 @@ func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
-	requestUrlMap, err := api.parseAndValidateRequest(r)
+	requestURLMap, err := api.parseAndValidateRequest(r)
 
 	if err != nil {
 		switch err {
@@ -112,7 +110,7 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	metricValue, err := api.app.CommunicateWithHttpLayer(requestUrlMap)
+	metricValue, err := api.app.CommunicateWithHTTPLayer(requestURLMap)
 	if err != nil {
 		switch err {
 		case applayer.ErrWrongMetricType:
@@ -126,7 +124,7 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	w.Write([]byte(metricValue))
+	w.Write([]byte(fmt.Sprintf("%s\n", metricValue)))
 }
 
 func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +132,6 @@ func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
 	gauge, counter := api.app.GetAll()
 	var s []string
 	for key, value := range gauge {
-		//to do: create a function
 		s = append(s, fmt.Sprintf("<h3>%s: %s</h3>\n", key, metricValueWithoutTrailingZero(value)))
 	}
 	for key, value := range counter {

@@ -1,6 +1,9 @@
 package applayer
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 func (app *app) Get(metricType, metricName string) (string, error) {
 	if metricType == "gauge" {
@@ -15,7 +18,7 @@ func (app *app) Get(metricType, metricName string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return string(metricValue), nil
+		return strconv.FormatInt(metricValue, 10), nil
 	}
 	return "", fmt.Errorf("uncatched error")
 
