@@ -4,15 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nktau/monitoring-service/internal/server/applayer"
+	"github.com/nktau/monitoring-service/internal/server/utils"
 	"net/http"
 	"strings"
 )
 
 var ErrMethodNotAllowed = errors.New("method not allowed")
-
-func metricValueWithoutTrailingZero(metricValue float64) string {
-	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", metricValue), "0"), ".")
-}
 
 func (api *httpAPI) updateAndValueHandler(w http.ResponseWriter, r *http.Request) {
 	requestURLMap := map[string]string{}
@@ -49,7 +46,7 @@ func (api *httpAPI) updateAndValueHandler(w http.ResponseWriter, r *http.Request
 	if len(requestURLSlice) >= 4 {
 		requestURLMap["metricValue"] = requestURLSlice[3]
 	}
-	value, err := api.app.CommunicateWithHTTPLayer(requestURLMap)
+	value, err := api.app.ParseUpdateAndValue(requestURLMap)
 	if err != nil {
 		switch err {
 		case applayer.ErrWrongMetricType:
@@ -81,7 +78,7 @@ func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
 	gauge, counter := api.app.GetAll()
 	var s []string
 	for key, value := range gauge {
-		s = append(s, fmt.Sprintf("<h3>%s: %s</h3>\n", key, metricValueWithoutTrailingZero(value)))
+		s = append(s, fmt.Sprintf("<h3>%s: %s</h3>\n", key, utils.MetricValueWithoutTrailingZero(value)))
 	}
 	for key, value := range counter {
 		s = append(s, fmt.Sprintf("<h3>%s: %d</h3>\n", key, value))

@@ -1,6 +1,7 @@
 package httplayer
 
 import (
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/nktau/monitoring-service/internal/server/applayer"
 	"net/http"
@@ -21,9 +22,9 @@ func New(appLayer applayer.App) httpAPI {
 		router: chi.NewRouter(),
 	}
 	// /update/*
-	api.router.Handle("/"+handlePathUpdate+"/*", setHeaders(http.HandlerFunc(api.updateAndValueHandler)))
+	api.router.Handle(fmt.Sprintf("/%s/*", handlePathUpdate), setHeaders(http.HandlerFunc(api.updateAndValueHandler)))
 	// /value/*
-	api.router.Handle("/"+handlePathValue+"/*", setHeaders(http.HandlerFunc(api.updateAndValueHandler)))
+	api.router.Handle(fmt.Sprintf("/%s/*", handlePathValue), setHeaders(http.HandlerFunc(api.updateAndValueHandler)))
 	api.router.Get("/", api.root)
 	return api
 }
