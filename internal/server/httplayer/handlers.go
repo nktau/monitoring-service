@@ -61,6 +61,9 @@ func (api *httpAPI) updateAndValueHandler(w http.ResponseWriter, r *http.Request
 		case applayer.ErrWrongMetricValue:
 			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
 			return
+		case applayer.ErrMetricNotFound:
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrMetricNotFound), http.StatusNotFound)
+			return
 		default:
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
 		}
