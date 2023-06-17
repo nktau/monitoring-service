@@ -14,117 +14,63 @@ func metricValueWithoutTrailingZero(metricValue float64) string {
 	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%f", metricValue), "0"), ".")
 }
 
-func (api *httpAPI) parseAndValidateRequest(r *http.Request) (map[string]string, error) {
+func (api *httpAPI) updateAndValueHandler(w http.ResponseWriter, r *http.Request) {
 	requestURLMap := map[string]string{}
 	urlPathWithoutFirstSlash := strings.TrimLeft(r.URL.Path, "/")
 	requestURLSlice := strings.Split(urlPathWithoutFirstSlash, "/")
 	if requestURLSlice[0] == handlePathUpdate && r.Method != http.MethodPost {
-		return nil, ErrMethodNotAllowed
+		http.Error(w, fmt.Sprintf("%v", ErrMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
 	}
 	if requestURLSlice[0] == handlePathValue && r.Method != http.MethodGet {
-		return nil, ErrMethodNotAllowed
+		http.Error(w, fmt.Sprintf("%v", ErrMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
 	}
 	requestURLMap["location"] = requestURLSlice[0]
 	// check if metric type is empty:
 	if len(requestURLSlice) < 2 || requestURLSlice[1] == "" {
-		return nil, applayer.ErrWrongMetricType
+		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricType), http.StatusBadRequest)
+		return
 	}
 	requestURLMap["metricType"] = requestURLSlice[1]
 	//
 	// check if metric name is empty:
 	if len(requestURLSlice) == 3 && requestURLSlice[2] == "" || len(requestURLSlice) == 2 {
-		return nil, applayer.ErrWrongMetricName
+		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricName), http.StatusNotFound)
+		return
 
 	}
 	requestURLMap["metricName"] = requestURLSlice[2]
 	// check if metric value is empty:
 	if requestURLSlice[0] == handlePathUpdate && len(requestURLSlice) < 4 {
-		fmt.Println(requestURLSlice[0], len(requestURLSlice))
-		return nil, applayer.ErrWrongMetricValue
-		//ctxWithUser = context.WithValue(r.Context(), validateErrorKey, validateErrorValueWrongMetricName)
+		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
+		return
 	}
 	if len(requestURLSlice) >= 4 {
 		requestURLMap["metricValue"] = requestURLSlice[3]
 	}
-	return requestURLMap, nil
-}
-
-func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
-	requestURLMap, err := api.parseAndValidateRequest(r)
-
+	value, err := api.app.CommunicateWithHTTPLayer(requestURLMap)
 	if err != nil {
 		switch err {
-		case ErrMethodNotAllowed:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusMethodNotAllowed)
-			return
 		case applayer.ErrWrongMetricType:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricType), http.StatusBadRequest)
 			return
 		case applayer.ErrWrongMetricName:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricName), http.StatusNotFound)
 			return
 		case applayer.ErrWrongMetricValue:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
 			return
 		default:
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
-			return
 		}
 	}
-	_, err = api.app.CommunicateWithHTTPLayer(requestURLMap)
-	if err != nil {
-		switch err {
-		case applayer.ErrWrongMetricType:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
-			return
-		case applayer.ErrWrongMetricName:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
-			return
-		case applayer.ErrWrongMetricValue:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
-			return
-		default:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
-			return
-		}
+
+	if requestURLMap["location"] == handlePathValue {
+		w.Write([]byte(fmt.Sprintf("%s\n", value)))
+		return
 	}
 	w.Write([]byte("ok\n"))
-}
-
-func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
-	requestURLMap, err := api.parseAndValidateRequest(r)
-
-	if err != nil {
-		switch err {
-		case ErrMethodNotAllowed:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusMethodNotAllowed)
-			return
-		case applayer.ErrWrongMetricType:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
-			return
-		case applayer.ErrWrongMetricName:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
-			return
-		default:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
-			return
-		}
-	}
-	metricValue, err := api.app.CommunicateWithHTTPLayer(requestURLMap)
-	if err != nil {
-		switch err {
-		case applayer.ErrWrongMetricType:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
-			return
-		case applayer.ErrWrongMetricName:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
-			return
-		default:
-			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
-			return
-		}
-	}
-	w.Write([]byte(fmt.Sprintf("%s\n", metricValue)))
 }
 
 func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
