@@ -11,13 +11,13 @@ import (
 
 var ErrMethodNotAllowed = errors.New("method not allowed")
 
-func getRequestUrlSlice(request string) []string {
+func getRequestURLSlice(request string) []string {
 	return strings.Split(strings.TrimLeft(request, "/"), "/")
 }
 
 func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 	requestURLMap := map[string]string{}
-	requestURLSlice := getRequestUrlSlice(r.URL.Path)
+	requestURLSlice := getRequestURLSlice(r.URL.Path)
 	requestURLMap["location"] = requestURLSlice[0]
 	// check if metric type is empty:
 	if len(requestURLSlice) < 2 || requestURLSlice[1] == "" {
@@ -65,7 +65,7 @@ func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 
 func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 	requestURLMap := map[string]string{}
-	requestURLSlice := getRequestUrlSlice(r.URL.Path)
+	requestURLSlice := getRequestURLSlice(r.URL.Path)
 	requestURLMap["location"] = requestURLSlice[0]
 	// check if metric type is empty:
 	if len(requestURLSlice) < 2 || requestURLSlice[1] == "" {
@@ -80,14 +80,6 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestURLMap["metricName"] = requestURLSlice[2]
-	// check if metric value is empty:
-	if len(requestURLSlice) < 4 {
-		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
-		return
-	}
-	if len(requestURLSlice) >= 4 {
-		requestURLMap["metricValue"] = requestURLSlice[3]
-	}
 	value, err := api.app.ParseUpdateAndValue(requestURLMap)
 	if err != nil {
 		switch err {
@@ -106,7 +98,6 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Write([]byte(fmt.Sprintf("%s\n", value)))
-	return
 }
 
 func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
