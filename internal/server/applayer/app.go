@@ -19,34 +19,26 @@ type app struct {
 
 type App interface {
 	GetAll() (map[string]float64, map[string]int64)
-	ParseUpdateAndValue(map[string]string) (string, error)
+	Update(metricType, metricName, metricValue string) error
+	Get(metricType, metricName string) (string, error)
 }
 
 func New(store storagelayer.MemStorage) *app {
 	return &app{store: store}
 }
 
-func (app *app) ParseUpdateAndValue(requestURLMap map[string]string) (string, error) {
-	if requestURLMap["metricType"] != "gauge" && requestURLMap["metricType"] != "counter" {
-		return "", ErrWrongMetricType
+func checkIfWrongMetricType(metricType string) error {
+	if metricType != "gauge" && metricType != "counter" {
+		return ErrWrongMetricType
 	}
-	if requestURLMap["location"] == "update" {
-		err := app.update(requestURLMap["metricType"], requestURLMap["metricName"], requestURLMap["metricValue"])
-		if err != nil {
-			return "", err
-		}
-	}
-	if requestURLMap["location"] == "value" {
-		metricValue, err := app.get(requestURLMap["metricType"], requestURLMap["metricName"])
-		if err != nil {
-			return "", err
-		}
-		return metricValue, nil
-	}
-	return "", nil
+	return nil
 }
 
-func (app *app) get(metricType, metricName string) (string, error) {
+func (app *app) Get(metricType, metricName string) (string, error) {
+	err := checkIfWrongMetricType(metricType)
+	if err != nil {
+		return "", err
+	}
 	if metricType == "gauge" {
 		metricValue, err := app.store.GetGauge(metricName)
 		if err != nil {
@@ -70,7 +62,11 @@ func (app *app) GetAll() (map[string]float64, map[string]int64) {
 	return app.store.GetAll()
 }
 
-func (app *app) update(metricType, metricName, metricValue string) error {
+func (app *app) Update(metricType, metricName, metricValue string) error {
+	err := checkIfWrongMetricType(metricType)
+	if err != nil {
+		return err
+	}
 	if metricType == "gauge" {
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {

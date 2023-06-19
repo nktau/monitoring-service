@@ -40,7 +40,7 @@ func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 	if len(requestURLSlice) >= 4 {
 		requestURLMap["metricValue"] = requestURLSlice[3]
 	}
-	_, err := api.app.ParseUpdateAndValue(requestURLMap)
+	err := api.app.Update(requestURLMap["metricType"], requestURLMap["metricName"], requestURLMap["metricValue"])
 	if err != nil {
 		switch err {
 		case applayer.ErrWrongMetricType:
@@ -77,7 +77,7 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestURLMap["metricName"] = requestURLSlice[2]
-	value, err := api.app.ParseUpdateAndValue(requestURLMap)
+	value, err := api.app.Get(requestURLMap["metricType"], requestURLMap["metricName"])
 	if err != nil {
 		switch err {
 		case applayer.ErrWrongMetricType:
