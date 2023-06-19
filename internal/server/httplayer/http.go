@@ -22,9 +22,10 @@ func New(appLayer applayer.App) httpAPI {
 		router: chi.NewRouter(),
 	}
 	// /update/*
-	api.router.Handle(fmt.Sprintf("/%s/*", handlePathUpdate), setHeaders(http.HandlerFunc(api.updateAndValueHandler)))
+	api.router.Use(setHeaders)
+	api.router.Post(fmt.Sprintf("/%s/*", handlePathUpdate), api.update)
 	// /value/*
-	api.router.Handle(fmt.Sprintf("/%s/*", handlePathValue), setHeaders(http.HandlerFunc(api.updateAndValueHandler)))
+	api.router.Get(fmt.Sprintf("/%s/*", handlePathValue), api.value)
 	api.router.Get("/", api.root)
 	return api
 }

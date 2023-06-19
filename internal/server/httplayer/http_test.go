@@ -90,8 +90,8 @@ func TestUpdate(t *testing.T) {
 			httpMethod: http.MethodTrace,
 			want: want{
 				code:        http.StatusMethodNotAllowed,
-				response:    "method not allowed\n",
-				contentType: "text/plain; charset=utf-8",
+				response:    "",
+				contentType: "text/plain",
 			},
 		},
 	}

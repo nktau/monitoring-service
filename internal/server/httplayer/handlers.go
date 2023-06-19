@@ -11,18 +11,13 @@ import (
 
 var ErrMethodNotAllowed = errors.New("method not allowed")
 
-func (api *httpAPI) updateAndValueHandler(w http.ResponseWriter, r *http.Request) {
+func getRequestUrlSlice(request string) []string {
+	return strings.Split(strings.TrimLeft(request, "/"), "/")
+}
+
+func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 	requestURLMap := map[string]string{}
-	urlPathWithoutFirstSlash := strings.TrimLeft(r.URL.Path, "/")
-	requestURLSlice := strings.Split(urlPathWithoutFirstSlash, "/")
-	if requestURLSlice[0] == handlePathUpdate && r.Method != http.MethodPost {
-		http.Error(w, fmt.Sprintf("%v", ErrMethodNotAllowed), http.StatusMethodNotAllowed)
-		return
-	}
-	if requestURLSlice[0] == handlePathValue && r.Method != http.MethodGet {
-		http.Error(w, fmt.Sprintf("%v", ErrMethodNotAllowed), http.StatusMethodNotAllowed)
-		return
-	}
+	requestURLSlice := getRequestUrlSlice(r.URL.Path)
 	requestURLMap["location"] = requestURLSlice[0]
 	// check if metric type is empty:
 	if len(requestURLSlice) < 2 || requestURLSlice[1] == "" {
@@ -35,11 +30,58 @@ func (api *httpAPI) updateAndValueHandler(w http.ResponseWriter, r *http.Request
 	if len(requestURLSlice) == 3 && requestURLSlice[2] == "" || len(requestURLSlice) == 2 {
 		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricName), http.StatusNotFound)
 		return
-
 	}
 	requestURLMap["metricName"] = requestURLSlice[2]
 	// check if metric value is empty:
-	if requestURLSlice[0] == handlePathUpdate && len(requestURLSlice) < 4 {
+	if len(requestURLSlice) < 4 {
+		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
+		return
+	}
+	if len(requestURLSlice) >= 4 {
+		requestURLMap["metricValue"] = requestURLSlice[3]
+	}
+	_, err := api.app.ParseUpdateAndValue(requestURLMap)
+	if err != nil {
+		switch err {
+		case applayer.ErrWrongMetricType:
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricType), http.StatusBadRequest)
+			return
+		case applayer.ErrWrongMetricName:
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricName), http.StatusNotFound)
+			return
+		case applayer.ErrWrongMetricValue:
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
+			return
+		case applayer.ErrMetricNotFound:
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrMetricNotFound), http.StatusNotFound)
+			return
+		default:
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Write([]byte("ok\n"))
+}
+
+func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
+	requestURLMap := map[string]string{}
+	requestURLSlice := getRequestUrlSlice(r.URL.Path)
+	requestURLMap["location"] = requestURLSlice[0]
+	// check if metric type is empty:
+	if len(requestURLSlice) < 2 || requestURLSlice[1] == "" {
+		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricType), http.StatusBadRequest)
+		return
+	}
+	requestURLMap["metricType"] = requestURLSlice[1]
+	//
+	// check if metric name is empty:
+	if len(requestURLSlice) == 3 && requestURLSlice[2] == "" || len(requestURLSlice) == 2 {
+		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricName), http.StatusNotFound)
+		return
+	}
+	requestURLMap["metricName"] = requestURLSlice[2]
+	// check if metric value is empty:
+	if len(requestURLSlice) < 4 {
 		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
 		return
 	}
@@ -58,19 +100,13 @@ func (api *httpAPI) updateAndValueHandler(w http.ResponseWriter, r *http.Request
 		case applayer.ErrWrongMetricValue:
 			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
 			return
-		case applayer.ErrMetricNotFound:
-			http.Error(w, fmt.Sprintf("%v", applayer.ErrMetricNotFound), http.StatusNotFound)
-			return
 		default:
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
+			return
 		}
 	}
-
-	if requestURLMap["location"] == handlePathValue {
-		w.Write([]byte(fmt.Sprintf("%s\n", value)))
-		return
-	}
-	w.Write([]byte("ok\n"))
+	w.Write([]byte(fmt.Sprintf("%s\n", value)))
+	return
 }
 
 func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
