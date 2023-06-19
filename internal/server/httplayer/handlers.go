@@ -89,8 +89,8 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 		case applayer.ErrWrongMetricName:
 			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricName), http.StatusNotFound)
 			return
-		case applayer.ErrWrongMetricValue:
-			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
+		case applayer.ErrMetricNotFound:
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrMetricNotFound), http.StatusNotFound)
 			return
 		default:
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
