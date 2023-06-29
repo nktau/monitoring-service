@@ -57,6 +57,7 @@ func (api *httpAPI) update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok\n"))
 }
 
@@ -94,6 +95,7 @@ func (api *httpAPI) value(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("%s\n", value)))
 }
 
@@ -108,6 +110,7 @@ func (api *httpAPI) root(w http.ResponseWriter, r *http.Request) {
 		s = append(s, fmt.Sprintf("<h3>%s: %d</h3>\n", key, value))
 	}
 	for _, i := range s {
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(i))
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nktau/monitoring-service/internal/server/applayer"
 	"github.com/nktau/monitoring-service/internal/server/storagelayer"
+	"github.com/nktau/monitoring-service/internal/server/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -12,14 +13,15 @@ import (
 	"testing"
 )
 
-func TestUpdate(t *testing.T) {
+var logger = utils.InitLogger()
 
+func TestUpdate(t *testing.T) {
 	// create storage layer
 	storeLayer := storagelayer.New()
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpAPI := New(appLayer)
+	httpAPI := New(appLayer, logger)
 	ts := httptest.NewServer(httpAPI.router)
 	defer ts.Close()
 
@@ -125,7 +127,7 @@ func TestValue(t *testing.T) {
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpAPI := New(appLayer)
+	httpAPI := New(appLayer, logger)
 	ts := httptest.NewServer(httpAPI.router)
 	defer ts.Close()
 	testMetric := "testMetric"
