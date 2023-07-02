@@ -68,9 +68,15 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 			)
 			if err != nil {
 				mem.logger.Error("can't send metric to the server", zap.Error(err))
-				req.Body.Close()
+				err = req.Body.Close()
+				if err != nil {
+					mem.logger.Error("can't close req body", zap.Error(err))
+				}
 			}
-			req.Body.Close()
+			err = req.Body.Close()
+			if err != nil {
+				mem.logger.Error("can't close req body", zap.Error(err))
+			}
 		}
 	}
 	metric := Metrics{
@@ -89,9 +95,15 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 	)
 	if err != nil {
 		mem.logger.Error("can't send metric to the server", zap.Error(err))
-		req.Body.Close()
+		err = req.Body.Close()
+		if err != nil {
+			mem.logger.Error("can't close req body", zap.Error(err))
+		}
 	}
-	req.Body.Close()
+	err = req.Body.Close()
+	if err != nil {
+		mem.logger.Error("can't close req body", zap.Error(err))
+	}
 
 }
 
