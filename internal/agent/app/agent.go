@@ -46,11 +46,8 @@ type Metrics struct {
 }
 
 func (mem *memStorage) SendRuntimeMetric(serverURL string) {
-	fmt.Println("mem.gauge", mem.gauge)
 	for _, gauge := range mem.gauge {
-		fmt.Println("gauge", gauge)
 		for metricName, metricValue := range gauge {
-			fmt.Println("metricName, metricValue", metricName, metricValue)
 			metric := Metrics{
 				ID:    metricName,
 				MType: "gauge",
@@ -70,11 +67,13 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				mem.logger.Error("can't send metric to the server",
 					zap.Error(err),
 					zap.String("request body: ", string(requestBody)))
-				continue
+
 				err = req.Body.Close()
 				if err != nil {
 					mem.logger.Error("can't close req body", zap.Error(err))
+					continue
 				}
+				continue
 			}
 			err = req.Body.Close()
 			if err != nil {

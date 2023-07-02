@@ -23,8 +23,8 @@ func New() config {
 
 func (cfg *config) parseFlags() {
 	flag.StringVar(&cfg.ServerURL, "a", "localhost:8080", "endpoint of monitoring-service server")
-	flag.IntVar(&cfg.ReportInterval, "r", 2, "frequency of sending metrics to the server in seconds")
-	flag.IntVar(&cfg.PollInterval, "p", 1, "frequency of polling metrics from the runtime package in seconds")
+	flag.IntVar(&cfg.ReportInterval, "r", 10, "frequency of sending metrics to the server in seconds")
+	flag.IntVar(&cfg.PollInterval, "p", 2, "frequency of polling metrics from the runtime package in seconds")
 	flag.Parse()
 }
 
