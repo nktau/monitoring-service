@@ -154,6 +154,9 @@ func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
 	tmpGaugeMap["StackInuse"] = float64(rtm.StackInuse)
 	tmpGaugeMap["StackSys"] = float64(rtm.StackSys)
 	tmpGaugeMap["Sys"] = float64(rtm.Sys)
+	tmpGaugeMap["NumForcedGC"] = float64(rtm.NumForcedGC)
+	tmpGaugeMap["TotalAlloc"] = float64(rtm.TotalAlloc)
+	tmpGaugeMap["Lookups"] = float64(rtm.Lookups)
 
 	tmpGaugeMap["RandomValue"] = rand.Float64()
 	mem.gauge = append(mem.gauge, tmpGaugeMap)
