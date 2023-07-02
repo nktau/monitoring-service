@@ -108,7 +108,7 @@ func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	var errFromAppLayer error
 	if metric.Delta != nil && metric.Value == nil {
-		errFromAppLayer = api.app.Update(metric.MType, metric.ID, string(*metric.Delta))
+		errFromAppLayer = api.app.Update(metric.MType, metric.ID, fmt.Sprintf("%d", *metric.Delta))
 	} else if metric.Delta == nil && metric.Value != nil {
 		errFromAppLayer = api.app.Update(metric.MType, metric.ID, utils.MetricValueWithoutTrailingZero(*metric.Value))
 	}
