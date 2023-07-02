@@ -75,6 +75,7 @@ func handleApplayerValueError(errFromAppLayer error, w http.ResponseWriter) erro
 }
 
 func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	body, err := io.ReadAll(r.Body)
 	api.logger.Debug("body:", zap.String("body", string(body)))
 	r.Body.Close()
@@ -128,6 +129,7 @@ func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *httpAPI) updatePlainText(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	requestURLMap := map[string]string{}
 	requestURLSlice := getRequestURLSlice(r.URL.Path)
 	requestURLMap["location"] = requestURLSlice[0]
@@ -162,6 +164,7 @@ func (api *httpAPI) updatePlainText(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	body, err := io.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
@@ -220,6 +223,7 @@ func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *httpAPI) valuePlainText(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	requestURLMap := map[string]string{}
 	requestURLSlice := getRequestURLSlice(r.URL.Path)
 	requestURLMap["location"] = requestURLSlice[0]
