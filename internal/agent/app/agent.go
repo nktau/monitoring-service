@@ -27,7 +27,7 @@ func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int)
 	count := 0
 	for {
 		if count%pollInterval == 0 {
-			mem.GetRuntimeMetrics()
+			mem.GetRuntimeMetrics(int64(reportInterval))
 		}
 		count++
 		if count%reportInterval == 0 {
@@ -46,8 +46,11 @@ type Metrics struct {
 }
 
 func (mem *memStorage) SendRuntimeMetric(serverURL string) {
+	fmt.Println("mem.gauge", mem.gauge)
 	for _, gauge := range mem.gauge {
+		fmt.Println("gauge", gauge)
 		for metricName, metricValue := range gauge {
+			fmt.Println("metricName, metricValue", metricName, metricValue)
 			metric := Metrics{
 				ID:    metricName,
 				MType: "gauge",
@@ -70,9 +73,32 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 			req.Body.Close()
 		}
 	}
+	metric := Metrics{
+		ID:    "PollCount",
+		MType: "counter",
+		Delta: &mem.counter,
+	}
+	requestBody, err := json.Marshal(metric)
+	fmt.Println(string(requestBody))
+	if err != nil {
+		mem.logger.Error("can't create request body json", zap.Error(err))
+	}
+	req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
+		"application/json",
+		bytes.NewBuffer(requestBody),
+	)
+	if err != nil {
+		mem.logger.Error("can't send metric to the server", zap.Error(err))
+		req.Body.Close()
+	}
+	req.Body.Close()
+
 }
 
-func (mem *memStorage) GetRuntimeMetrics() {
+func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
+	if mem.counter%reportInterval == 0 {
+		mem.gauge = []map[string]float64{}
+	}
 	var rtm runtime.MemStats
 	runtime.ReadMemStats(&rtm)
 	tmpGaugeMap := map[string]float64{}
