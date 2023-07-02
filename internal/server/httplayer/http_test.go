@@ -43,7 +43,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        200,
 				response:    "ok\n",
-				contentType: "text/plain",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -53,7 +53,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        200,
 				response:    "ok\n",
-				contentType: "text/plain",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -93,7 +93,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        http.StatusMethodNotAllowed,
 				response:    "",
-				contentType: "text/plain",
+				contentType: "",
 			},
 		},
 	}
@@ -161,7 +161,7 @@ func TestValue(t *testing.T) {
 			want: want{
 				code:        http.StatusOK,
 				response:    testMetricValue + "\n",
-				contentType: "text/plain",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
