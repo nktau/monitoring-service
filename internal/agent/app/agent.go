@@ -72,7 +72,6 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 					zap.Error(err),
 					zap.String("request body: ", string(requestBody)))
 				continue
-				req.Body.Close()
 
 			}
 			err = req.Body.Close()
