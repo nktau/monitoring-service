@@ -8,6 +8,8 @@ import (
 
 func main() {
 	cfg := config.New()
-	agent := app.New(utils.InitLogger())
+	logger := utils.InitLogger()
+	agent := app.New(logger)
+	logger.Info("starting agent")
 	agent.Start(cfg.ServerURL, cfg.ReportInterval, cfg.PollInterval)
 }
