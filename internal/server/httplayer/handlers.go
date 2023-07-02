@@ -76,6 +76,7 @@ func handleApplayerValueError(errFromAppLayer error, w http.ResponseWriter) erro
 
 func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
+	api.logger.Debug("body:", zap.String("body", string(body)))
 	r.Body.Close()
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -168,6 +169,7 @@ func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
 		api.logger.Info("can't read request body", zap.Error(err))
 		return
 	}
+	api.logger.Debug("body:", zap.String("body", string(body)))
 	var metric Metrics
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
