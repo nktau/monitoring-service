@@ -20,10 +20,10 @@ func getRequestURLSlice(request string) []string {
 }
 
 func (api *httpAPI) whichOfUpdateHandlerUse(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") == "text/plain" {
-		api.updatePlainText(w, r)
-	} else {
+	if r.Header.Get("Content-Type") == "application/json" {
 		api.updateJson(w, r)
+	} else {
+		api.updatePlainText(w, r)
 	}
 }
 
