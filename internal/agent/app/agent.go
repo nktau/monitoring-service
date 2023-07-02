@@ -1,7 +1,10 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -11,10 +14,13 @@ import (
 type memStorage struct {
 	gauge   []map[string]float64
 	counter int64
+	logger  *zap.Logger
 }
 
-func New() memStorage {
-	return memStorage{}
+func New(logger *zap.Logger) memStorage {
+	return memStorage{
+		logger: logger,
+	}
 }
 
 func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int) {
@@ -32,13 +38,33 @@ func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int)
 
 }
 
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+
 func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 	for _, gauge := range mem.gauge {
 		for metricName, metricValue := range gauge {
-			requestURL := fmt.Sprintf("%s/update/gauge/%s/%f", serverURL, metricName, metricValue)
-			req, err := http.Post(requestURL, "text/plain", nil)
+			metric := Metrics{
+				ID:    metricName,
+				MType: "gauge",
+				Value: &metricValue,
+			}
+			requestBody, err := json.Marshal(metric)
+			fmt.Println(string(requestBody))
 			if err != nil {
-				fmt.Println(err)
+				mem.logger.Error("can't create request body json", zap.Error(err))
+				continue
+			}
+			req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
+				"application/json",
+				bytes.NewBuffer(requestBody),
+			)
+			if err != nil {
+				mem.logger.Error("can't send metric to the server", zap.Error(err))
 				req.Body.Close()
 			}
 			req.Body.Close()
