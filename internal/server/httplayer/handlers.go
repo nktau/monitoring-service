@@ -21,7 +21,7 @@ func getRequestURLSlice(request string) []string {
 
 func (api *httpAPI) whichOfUpdateHandlerUse(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") == "application/json" {
-		api.updateJson(w, r)
+		api.updateJSON(w, r)
 	} else {
 		api.updatePlainText(w, r)
 	}
@@ -74,7 +74,7 @@ func handleApplayerValueError(errFromAppLayer error, w http.ResponseWriter) erro
 	return nil
 }
 
-func (api *httpAPI) updateJson(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {
@@ -107,7 +107,6 @@ func (api *httpAPI) updateJson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var errFromAppLayer error
-	fmt.Println(errFromAppLayer)
 	if metric.Delta != nil && metric.Value == nil {
 		errFromAppLayer = api.app.Update(metric.MType, metric.ID, string(*metric.Delta))
 	} else if metric.Delta == nil && metric.Value != nil {
@@ -161,7 +160,7 @@ func (api *httpAPI) updatePlainText(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ok\n"))
 }
 
-func (api *httpAPI) valueJson(w http.ResponseWriter, r *http.Request) {
+func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	r.Body.Close()
 	if err != nil {

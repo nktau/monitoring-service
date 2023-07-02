@@ -30,7 +30,7 @@ func New(appLayer applayer.App, logger *zap.Logger) httpAPI {
 	api.router.Post(fmt.Sprintf("/%s/*", handlePathUpdate), api.whichOfUpdateHandlerUse)
 	// /value/*
 	api.router.Get(fmt.Sprintf("/%s/*", handlePathValue), api.valuePlainText)
-	api.router.Post(fmt.Sprintf("/%s/*", handlePathValue), api.valueJson)
+	api.router.Post(fmt.Sprintf("/%s/*", handlePathValue), api.valueJSON)
 	api.router.Get("/", api.root)
 	return api
 }
