@@ -57,7 +57,7 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				Value: &metricValue,
 			}
 			requestBody, err := json.Marshal(metric)
-			fmt.Println(string(requestBody))
+
 			if err != nil {
 				mem.logger.Error("can't create request body json", zap.Error(err))
 				continue
@@ -67,7 +67,10 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				bytes.NewBuffer(requestBody),
 			)
 			if err != nil {
-				mem.logger.Error("can't send metric to the server", zap.Error(err))
+				mem.logger.Error("can't send metric to the server",
+					zap.Error(err),
+					zap.String("request body: ", string(requestBody)))
+				continue
 				err = req.Body.Close()
 				if err != nil {
 					mem.logger.Error("can't close req body", zap.Error(err))
