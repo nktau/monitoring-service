@@ -31,7 +31,11 @@ func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int)
 		}
 		count++
 		if count%reportInterval == 0 {
-			mem.SendRuntimeMetric(serverURL)
+			err := mem.SendRuntimeMetric(serverURL)
+			if err != nil {
+				fmt.Println("!!!!!        ERROR          !!!!", err)
+				continue
+			}
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -45,7 +49,7 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func (mem *memStorage) SendRuntimeMetric(serverURL string) {
+func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 	for _, gauge := range mem.gauge {
 		for metricName, metricValue := range gauge {
 			metric := Metrics{
@@ -67,45 +71,56 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				mem.logger.Error("can't send metric to the server",
 					zap.Error(err),
 					zap.String("request body: ", string(requestBody)))
-
-				err = req.Body.Close()
-				if err != nil {
-					mem.logger.Error("can't close req body", zap.Error(err))
-					continue
-				}
 				continue
+				req.Body.Close()
+
 			}
 			err = req.Body.Close()
 			if err != nil {
 				mem.logger.Error("can't close req body", zap.Error(err))
+				continue
 			}
 		}
-	}
-	metric := Metrics{
-		ID:    "PollCount",
-		MType: "counter",
-		Delta: &mem.counter,
-	}
-	requestBody, err := json.Marshal(metric)
-	fmt.Println(string(requestBody))
-	if err != nil {
-		mem.logger.Error("can't create request body json", zap.Error(err))
-	}
-	req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
-		"application/json",
-		bytes.NewBuffer(requestBody),
-	)
-	if err != nil {
-		mem.logger.Error("can't send metric to the server", zap.Error(err))
-		err = req.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close req body", zap.Error(err))
+		metric := Metrics{
+			ID:    "PollCount",
+			MType: "counter",
+			Delta: &mem.counter,
 		}
+		requestBody, err := json.Marshal(metric)
+		if err != nil {
+			mem.logger.Error("can't create request body json", zap.Error(err))
+		}
+		req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
+			"application/json",
+			bytes.NewBuffer(requestBody),
+		)
+		if err != nil {
+			mem.logger.Error("can't send metric to the server", zap.Error(err))
+			continue
+		}
+		req.Body.Close()
 	}
-	err = req.Body.Close()
-	if err != nil {
-		mem.logger.Error("can't close req body", zap.Error(err))
-	}
+	//metric := Metrics{
+	//	ID:    "PollCount",
+	//	MType: "counter",
+	//	Delta: &mem.counter,
+	//}
+	//requestBody, err := json.Marshal(metric)
+	//fmt.Println(string(requestBody))
+	//if err != nil {
+	//	mem.logger.Error("can't create request body json", zap.Error(err))
+	//}
+	//req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
+	//	"application/json",
+	//	bytes.NewBuffer(requestBody),
+	//)
+	//if err != nil {
+	//	mem.logger.Error("can't send metric to the server", zap.Error(err))
+	//	req.Body.Close()
+	//	return err
+	//}
+	//req.Body.Close()
+	return nil
 
 }
 
