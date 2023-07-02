@@ -48,15 +48,6 @@ type Metrics struct {
 func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 	for _, gauge := range mem.gauge {
 		for metricName, metricValue := range gauge {
-			requestURL := fmt.Sprintf("%s/update/gauge/%s/%f", serverURL, metricName, metricValue)
-			req, err := http.Post(requestURL, "text/plain", nil)
-			if err != nil {
-				mem.logger.Error("can't send plain text request", zap.Error(err))
-				req.Body.Close()
-			}
-			mem.logger.Info("plain text successfully send data to the server", zap.String("status: ", req.Status))
-			req.Body.Close()
-
 			metric := Metrics{
 				ID:    metricName,
 				MType: "gauge",
@@ -68,7 +59,7 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				mem.logger.Error("can't create request body json", zap.Error(err))
 				continue
 			}
-			req, err = http.Post(fmt.Sprintf("%s/update/", serverURL),
+			req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
 				"application/json",
 				bytes.NewBuffer(requestBody),
 			)
@@ -76,7 +67,6 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				mem.logger.Error("can't send metric to the server", zap.Error(err))
 				req.Body.Close()
 			}
-			mem.logger.Info("json successfully send data to the server", zap.String("status: ", req.Status))
 			req.Body.Close()
 		}
 	}
