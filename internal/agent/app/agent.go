@@ -88,8 +88,9 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 					zap.String("request body: ", string(requestBody)))
 				continue
 			}
-			_, err = http.DefaultClient.Do(req)
+			res, err := http.DefaultClient.Do(req)
 			req.Body.Close()
+			res.Body.Close()
 			if err != nil {
 				mem.logger.Error("can't close req body", zap.Error(err))
 				continue
@@ -115,8 +116,9 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
 
-		_, err = http.DefaultClient.Do(req)
+		res, err := http.DefaultClient.Do(req)
 		req.Body.Close()
+		res.Body.Close()
 		if err != nil {
 			mem.logger.Error("can't send metric to the server", zap.Error(err))
 			continue
