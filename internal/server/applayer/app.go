@@ -18,7 +18,7 @@ type app struct {
 }
 
 type App interface {
-	GetAll() (map[string]float64, map[string]int64)
+	GetAll() ([]map[string]float64, []map[string]int64)
 	Update(metricType, metricName, metricValue string) error
 	Get(metricType, metricName string) (string, error)
 }
@@ -57,7 +57,7 @@ func (app *app) Get(metricType, metricName string) (string, error) {
 
 }
 
-func (app *app) GetAll() (map[string]float64, map[string]int64) {
+func (app *app) GetAll() ([]map[string]float64, []map[string]int64) {
 
 	return app.store.GetAll()
 }
