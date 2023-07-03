@@ -1,6 +1,7 @@
 package httplayer
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,6 +26,22 @@ func (api *httpAPI) whichOfUpdateHandlerUse(w http.ResponseWriter, r *http.Reque
 	} else {
 		api.updatePlainText(w, r)
 	}
+}
+
+func (api *httpAPI) readBody(r *http.Request) (io.Reader, error) {
+	var reader io.Reader
+	if r.Header.Get(`Content-Encoding`) == `gzip` {
+		gz, err := gzip.NewReader(r.Body)
+		if err != nil {
+			return nil, err
+		}
+		reader = gz
+		api.logger.Debug("Successfully decompress request body")
+		defer gz.Close()
+	} else {
+		reader = r.Body
+	}
+	return reader, nil
 }
 
 type Metrics struct {
@@ -76,7 +93,13 @@ func handleApplayerValueError(errFromAppLayer error, w http.ResponseWriter) erro
 
 func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	body, err := io.ReadAll(r.Body)
+	reader, err := api.readBody(r)
+	if err != nil {
+		api.logger.Error("can't decode request body", zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	body, err := io.ReadAll(reader)
 	api.logger.Debug("body:", zap.String("body", string(body)))
 	r.Body.Close()
 	if err != nil {
@@ -165,7 +188,13 @@ func (api *httpAPI) updatePlainText(w http.ResponseWriter, r *http.Request) {
 
 func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	body, err := io.ReadAll(r.Body)
+	reader, err := api.readBody(r)
+	if err != nil {
+		api.logger.Error("can't decode request body", zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	body, err := io.ReadAll(reader)
 	r.Body.Close()
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)

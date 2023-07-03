@@ -3,6 +3,7 @@ package httplayer
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nktau/monitoring-service/internal/server/applayer"
 	"go.uber.org/zap"
 	"net/http"
@@ -27,6 +28,7 @@ func New(appLayer applayer.App, logger *zap.Logger) httpAPI {
 	// /update/*
 	//api.router.Use(setHeaders)
 	api.router.Use(api.withLogging)
+	api.router.Use(middleware.Compress(5, "application/json", "text/html"))
 	api.router.Post(fmt.Sprintf("/%s/*", handlePathUpdate), api.whichOfUpdateHandlerUse)
 	// /value/*
 	api.router.Get(fmt.Sprintf("/%s/*", handlePathValue), api.valuePlainText)

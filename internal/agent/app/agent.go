@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
@@ -21,6 +22,19 @@ func New(logger *zap.Logger) memStorage {
 	return memStorage{
 		logger: logger,
 	}
+}
+
+func (mem *memStorage) compress(data []byte) *bytes.Buffer {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	if _, err := gz.Write(data); err != nil {
+		mem.logger.Error("can't compress data", zap.Error(err))
+	}
+	if err := gz.Close(); err != nil {
+		mem.logger.Error("can't close gzip writer", zap.Error(err))
+	}
+	return &b
+
 }
 
 func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int) {
@@ -58,23 +72,23 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 				Value: &metricValue,
 			}
 			requestBody, err := json.Marshal(metric)
-
 			if err != nil {
 				mem.logger.Error("can't create request body json", zap.Error(err))
 				continue
 			}
-			req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
-				"application/json",
-				bytes.NewBuffer(requestBody),
-			)
+			compressedRequestBody := mem.compress(requestBody)
+			req, err := http.NewRequest(http.MethodPost,
+				fmt.Sprintf("%s/update/", serverURL),
+				compressedRequestBody)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Encoding", "gzip")
 			if err != nil {
 				mem.logger.Error("can't send metric to the server",
 					zap.Error(err),
 					zap.String("request body: ", string(requestBody)))
 				continue
-
 			}
-			err = req.Body.Close()
+			_, err = http.DefaultClient.Do(req)
 			if err != nil {
 				mem.logger.Error("can't close req body", zap.Error(err))
 				continue
@@ -89,36 +103,19 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 		if err != nil {
 			mem.logger.Error("can't create request body json", zap.Error(err))
 		}
-		req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
-			"application/json",
-			bytes.NewBuffer(requestBody),
-		)
+		compressedRequestBody := mem.compress(requestBody)
+		req, err := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("%s/update/", serverURL),
+			compressedRequestBody)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Encoding", "gzip")
+		_, err = http.DefaultClient.Do(req)
 		if err != nil {
 			mem.logger.Error("can't send metric to the server", zap.Error(err))
 			continue
 		}
 		req.Body.Close()
 	}
-	//metric := Metrics{
-	//	ID:    "PollCount",
-	//	MType: "counter",
-	//	Delta: &mem.counter,
-	//}
-	//requestBody, err := json.Marshal(metric)
-	//fmt.Println(string(requestBody))
-	//if err != nil {
-	//	mem.logger.Error("can't create request body json", zap.Error(err))
-	//}
-	//req, err := http.Post(fmt.Sprintf("%s/update/", serverURL),
-	//	"application/json",
-	//	bytes.NewBuffer(requestBody),
-	//)
-	//if err != nil {
-	//	mem.logger.Error("can't send metric to the server", zap.Error(err))
-	//	req.Body.Close()
-	//	return err
-	//}
-	//req.Body.Close()
 	return nil
 
 }
