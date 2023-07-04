@@ -59,7 +59,6 @@ func (mem *memStorage) writeToDiskWithStoreInterval() error {
 		count++
 		time.Sleep(1 * time.Second)
 	}
-	return nil
 }
 
 func (mem *memStorage) writeToDisk() error {

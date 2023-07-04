@@ -16,7 +16,6 @@ func GetLastLineWithSeek(filepath string) string {
 
 	if err != nil {
 		panic("Cannot open file")
-		os.Exit(1)
 	}
 	defer fileHandle.Close()
 
