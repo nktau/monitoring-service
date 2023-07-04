@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nktau/monitoring-service/internal/server/config"
+	"github.com/nktau/monitoring-service/internal/server/utils"
 	"go.uber.org/zap"
 	"os"
 	"time"
@@ -29,6 +30,10 @@ func New(logger *zap.Logger) *memStorage {
 		Counter: map[string]int64{},
 		logger:  logger,
 	}
+	if config.Config.Restore && config.Config.FileStoragePath != "" {
+		mem.readFromDisk()
+		fmt.Println(mem)
+	}
 	if config.Config.StoreInterval != 0 && config.Config.FileStoragePath != "" {
 		go mem.writeToDiskWithStoreInterval()
 	}
@@ -43,7 +48,7 @@ func New(logger *zap.Logger) *memStorage {
 
 func (mem *memStorage) writeToDiskWithStoreInterval() error {
 	count := 0
-	fmt.Println("writeToDisk")
+	//fmt.Println("writeToDisk")
 	for {
 		if count%config.Config.StoreInterval == 0 {
 			err := mem.writeToDisk()
@@ -58,7 +63,7 @@ func (mem *memStorage) writeToDiskWithStoreInterval() error {
 }
 
 func (mem *memStorage) writeToDisk() error {
-	file, err := os.OpenFile(config.Config.FileStoragePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	file, err := os.OpenFile(config.Config.FileStoragePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		mem.logger.Error("writeToDisk can't open file to store data", zap.Error(err))
 		file.Close()
@@ -66,6 +71,25 @@ func (mem *memStorage) writeToDisk() error {
 	}
 	encoder := json.NewEncoder(file)
 	encoder.Encode(mem)
+	file.Close()
+	return nil
+}
+
+func (mem *memStorage) readFromDisk() error {
+	file, err := os.OpenFile(config.Config.FileStoragePath, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		mem.logger.Error("readFromDisk can't open file to read data", zap.Error(err))
+		file.Close()
+		return err
+	}
+	fmt.Println("start GetLastLineWithSeek")
+	err = json.Unmarshal([]byte(utils.GetLastLineWithSeek(config.Config.FileStoragePath)), mem)
+	fmt.Println("complite GetLastLineWithSeek")
+	if err != nil {
+		mem.logger.Error("readFromDisk unmarshal err", zap.Error(err))
+		return err
+	}
+	fmt.Println("readFromDisk complite")
 	file.Close()
 	return nil
 }
