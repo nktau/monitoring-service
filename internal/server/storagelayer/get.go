@@ -7,7 +7,7 @@ import (
 var ErrMetricNotFound = errors.New("metric not found")
 
 func (mem *memStorage) GetCounter(metricName string) (metricValue int64, err error) {
-	value, ok := mem.counter[metricName]
+	value, ok := mem.Counter[metricName]
 	if ok {
 		return value, nil
 	}
@@ -15,7 +15,7 @@ func (mem *memStorage) GetCounter(metricName string) (metricValue int64, err err
 }
 
 func (mem *memStorage) GetGauge(metricName string) (metricValue float64, err error) {
-	value, ok := mem.gauge[metricName]
+	value, ok := mem.Gauge[metricName]
 	if ok {
 		return value, nil
 	}
@@ -23,5 +23,5 @@ func (mem *memStorage) GetGauge(metricName string) (metricValue float64, err err
 }
 
 func (mem *memStorage) GetAll() (map[string]float64, map[string]int64) {
-	return mem.gauge, mem.counter
+	return mem.Gauge, mem.Counter
 }

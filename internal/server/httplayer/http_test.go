@@ -17,7 +17,7 @@ var logger = utils.InitLogger()
 
 func TestUpdate(t *testing.T) {
 	// create storage layer
-	storeLayer := storagelayer.New()
+	storeLayer := storagelayer.New(logger)
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
@@ -123,7 +123,7 @@ func TestUpdate(t *testing.T) {
 func TestValue(t *testing.T) {
 
 	// create storage layer
-	storeLayer := storagelayer.New()
+	storeLayer := storagelayer.New(logger)
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer

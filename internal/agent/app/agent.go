@@ -13,8 +13,8 @@ import (
 )
 
 type memStorage struct {
-	gauge   []map[string]float64
-	counter int64
+	Gauge   []map[string]float64
+	Counter int64
 	logger  *zap.Logger
 }
 
@@ -64,7 +64,7 @@ type Metrics struct {
 }
 
 func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
-	for _, gauge := range mem.gauge {
+	for _, gauge := range mem.Gauge {
 		for metricName, metricValue := range gauge {
 			metric := Metrics{
 				ID:    metricName,
@@ -110,7 +110,7 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 		metric := Metrics{
 			ID:    "PollCount",
 			MType: "counter",
-			Delta: &mem.counter,
+			Delta: &mem.Counter,
 		}
 		requestBody, err := json.Marshal(metric)
 		if err != nil {
@@ -149,8 +149,8 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
 }
 
 func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
-	if mem.counter%reportInterval == 0 {
-		mem.gauge = []map[string]float64{}
+	if mem.Counter%reportInterval == 0 {
+		mem.Gauge = []map[string]float64{}
 	}
 	var rtm runtime.MemStats
 	runtime.ReadMemStats(&rtm)
@@ -184,7 +184,7 @@ func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
 	tmpGaugeMap["Lookups"] = float64(rtm.Lookups)
 
 	tmpGaugeMap["RandomValue"] = rand.Float64()
-	mem.gauge = append(mem.gauge, tmpGaugeMap)
-	mem.counter = mem.counter + 1
+	mem.Gauge = append(mem.Gauge, tmpGaugeMap)
+	mem.Counter = mem.Counter + 1
 
 }
