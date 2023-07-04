@@ -6,19 +6,11 @@ import (
 	"time"
 )
 
-//func setHeaders(next http.Handler) http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		w.Header().Set("Content-Type", "text/plain")
-//		next.ServeHTTP(w, r)
-//	})
-//}
-
 type (
 	responseData struct {
 		status int
 		size   int
 	}
-
 	loggingResponseWriter struct {
 		http.ResponseWriter
 		responseData *responseData
@@ -39,7 +31,6 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 func (api *httpAPI) withLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-
 		responseData := &responseData{
 			status: 0,
 			size:   0,
@@ -48,9 +39,7 @@ func (api *httpAPI) withLogging(next http.Handler) http.Handler {
 			ResponseWriter: w,
 			responseData:   responseData,
 		}
-
 		next.ServeHTTP(&lw, r)
-
 		duration := time.Since(start)
 		api.logger.Info("",
 			zap.String("URI", r.URL.String()),
@@ -59,6 +48,5 @@ func (api *httpAPI) withLogging(next http.Handler) http.Handler {
 			zap.Int("status", responseData.status),
 			zap.Int("size", responseData.size),
 		)
-
 	})
 }

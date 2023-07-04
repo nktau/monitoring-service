@@ -24,19 +24,6 @@ func New(logger *zap.Logger) memStorage {
 	}
 }
 
-func (mem *memStorage) compress(data []byte) *bytes.Buffer {
-	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
-	if _, err := gz.Write(data); err != nil {
-		mem.logger.Error("can't compress data", zap.Error(err))
-	}
-	if err := gz.Close(); err != nil {
-		mem.logger.Error("can't close gzip writer", zap.Error(err))
-	}
-	return &b
-
-}
-
 func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int) {
 	count := 0
 	for {
@@ -45,11 +32,7 @@ func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int)
 		}
 		count++
 		if count%reportInterval == 0 {
-			err := mem.SendRuntimeMetric(serverURL)
-			if err != nil {
-				fmt.Println("!!!!!        ERROR          !!!!", err)
-				continue
-			}
+			mem.SendRuntimeMetric(serverURL)
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -61,91 +44,6 @@ type Metrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-}
-
-func (mem *memStorage) SendRuntimeMetric(serverURL string) error {
-	for _, gauge := range mem.Gauge {
-		for metricName, metricValue := range gauge {
-			metric := Metrics{
-				ID:    metricName,
-				MType: "gauge",
-				Value: &metricValue,
-			}
-			requestBody, err := json.Marshal(metric)
-			if err != nil {
-				mem.logger.Error("can't create request body json", zap.Error(err))
-				continue
-			}
-			compressedRequestBody := mem.compress(requestBody)
-			req, err := http.NewRequest(http.MethodPost,
-				fmt.Sprintf("%s/update/", serverURL),
-				compressedRequestBody)
-			if err != nil {
-				mem.logger.Error("can't create request",
-					zap.Error(err),
-					zap.String("request body: ", string(requestBody)))
-				continue
-			}
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Content-Encoding", "gzip")
-
-			res, err := http.DefaultClient.Do(req)
-			if err != nil {
-				mem.logger.Error("can't send metric to the server",
-					zap.Error(err),
-					zap.String("request body: ", string(requestBody)))
-				continue
-			}
-			err = req.Body.Close()
-			if err != nil {
-				mem.logger.Error("can't close req body", zap.Error(err))
-				continue
-			}
-			err = res.Body.Close()
-			if err != nil {
-				mem.logger.Error("can't close res body", zap.Error(err))
-				continue
-			}
-		}
-		metric := Metrics{
-			ID:    "PollCount",
-			MType: "counter",
-			Delta: &mem.Counter,
-		}
-		requestBody, err := json.Marshal(metric)
-		if err != nil {
-			mem.logger.Error("can't create request body json", zap.Error(err))
-		}
-		compressedRequestBody := mem.compress(requestBody)
-		req, err := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("%s/update/", serverURL),
-			compressedRequestBody)
-		if err != nil {
-			mem.logger.Error("can't create request", zap.Error(err))
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Encoding", "gzip")
-
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			mem.logger.Error("can't send metric to the server", zap.Error(err))
-			continue
-		}
-		err = req.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close req body", zap.Error(err))
-			continue
-		}
-		err = res.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close res body", zap.Error(err))
-			continue
-		}
-
-	}
-	return nil
-
 }
 
 func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
@@ -186,5 +84,81 @@ func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
 	tmpGaugeMap["RandomValue"] = rand.Float64()
 	mem.Gauge = append(mem.Gauge, tmpGaugeMap)
 	mem.Counter = mem.Counter + 1
+}
+
+func (mem *memStorage) SendRuntimeMetric(serverURL string) {
+	for _, gauge := range mem.Gauge {
+		for metricName, metricValue := range gauge {
+			metric := Metrics{
+				ID:    metricName,
+				MType: "gauge",
+				Value: &metricValue,
+			}
+			err := mem.makeAndDoRequest(metric, serverURL)
+			if err != nil {
+				continue
+			}
+		}
+		metric := Metrics{
+			ID:    "PollCount",
+			MType: "counter",
+			Delta: &mem.Counter,
+		}
+		err := mem.makeAndDoRequest(metric, serverURL)
+		if err != nil {
+			continue
+		}
+	}
+}
+
+func (mem *memStorage) makeAndDoRequest(metric Metrics, serverURL string) error {
+	requestBody, err := json.Marshal(metric)
+	if err != nil {
+		mem.logger.Error("can't create request body json", zap.Error(err))
+		return err
+	}
+	compressedRequestBody := mem.compress(requestBody)
+	req, err := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/update/", serverURL),
+		compressedRequestBody)
+	if err != nil {
+		mem.logger.Error("can't create request",
+			zap.Error(err),
+			zap.String("request body: ", string(requestBody)))
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		mem.logger.Error("can't send metric to the server",
+			zap.Error(err),
+			zap.String("request body: ", string(requestBody)))
+		return err
+	}
+	err = req.Body.Close()
+	if err != nil {
+		mem.logger.Error("can't close req body", zap.Error(err))
+		return err
+	}
+	err = res.Body.Close()
+	if err != nil {
+		mem.logger.Error("can't close res body", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (mem *memStorage) compress(data []byte) *bytes.Buffer {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	if _, err := gz.Write(data); err != nil {
+		mem.logger.Error("can't compress data", zap.Error(err))
+	}
+	if err := gz.Close(); err != nil {
+		mem.logger.Error("can't close gzip writer", zap.Error(err))
+	}
+	return &b
 
 }
