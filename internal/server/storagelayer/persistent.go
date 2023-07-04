@@ -25,24 +25,18 @@ func (mem *memStorage) writeToDiskWithStoreInterval() error {
 
 func (mem *memStorage) writeToDisk() error {
 	file, err := os.OpenFile(config.Config.FileStoragePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-	defer file.Close()
 	if err != nil {
 		mem.logger.Fatal("writeToDisk can't open file to store data", zap.Error(err))
 		return err
 	}
+	defer file.Close()
 	encoder := json.NewEncoder(file)
 	encoder.Encode(mem)
 	return nil
 }
 
 func (mem *memStorage) readFromDisk() error {
-	file, err := os.OpenFile(config.Config.FileStoragePath, os.O_CREATE|os.O_RDWR, 0666)
-	defer file.Close()
-	if err != nil {
-		mem.logger.Fatal("readFromDisk can't open file to read data", zap.Error(err))
-		return err
-	}
-	err = json.Unmarshal([]byte(utils.GetLastLineWithSeek(config.Config.FileStoragePath)), mem)
+	err := json.Unmarshal([]byte(utils.GetLastLineWithSeek(config.Config.FileStoragePath)), mem)
 	if err != nil {
 		mem.logger.Error("readFromDisk unmarshal err", zap.Error(err))
 		return err
