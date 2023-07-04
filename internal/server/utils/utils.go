@@ -15,7 +15,7 @@ func MetricValueWithoutTrailingZero(metricValue float64) string {
 }
 
 func GetLastLineWithSeek(filepath string) string {
-	fileHandle, err := os.Open(filepath)
+	fileHandle, err := os.OpenFile(filepath, os.O_CREATE|os.O_RDONLY, 0666)
 	if err != nil {
 		logger.Fatal("can't open file", zap.Error(err))
 	}
