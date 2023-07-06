@@ -16,8 +16,10 @@ import (
 
 var logger = utils.InitLogger()
 
+var cfg config.Config
+
 func TestUpdate(t *testing.T) {
-	cfg := config.New()
+	cfg = config.New()
 	storeLayer := storagelayer.New(logger, cfg)
 	// create app layer
 	appLayer := applayer.New(storeLayer)
@@ -122,7 +124,6 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
-	cfg := config.New()
 	// create storage layer
 	storeLayer := storagelayer.New(logger, cfg)
 	// create app layer
