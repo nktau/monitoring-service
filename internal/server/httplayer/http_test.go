@@ -3,6 +3,7 @@ package httplayer
 import (
 	"fmt"
 	"github.com/nktau/monitoring-service/internal/server/applayer"
+	"github.com/nktau/monitoring-service/internal/server/config"
 	"github.com/nktau/monitoring-service/internal/server/storagelayer"
 	"github.com/nktau/monitoring-service/internal/server/utils"
 	"github.com/stretchr/testify/assert"
@@ -16,8 +17,8 @@ import (
 var logger = utils.InitLogger()
 
 func TestUpdate(t *testing.T) {
-	// create storage layer
-	storeLayer := storagelayer.New(logger)
+	cfg := config.New()
+	storeLayer := storagelayer.New(logger, cfg)
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
@@ -121,9 +122,9 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
-
+	cfg := config.New()
 	// create storage layer
-	storeLayer := storagelayer.New(logger)
+	storeLayer := storagelayer.New(logger, cfg)
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
