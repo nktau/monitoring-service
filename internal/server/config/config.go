@@ -7,20 +7,21 @@ import (
 	"strconv"
 )
 
-type config struct {
+type Config struct {
 	ListenAddress   string
 	StoreInterval   int
 	FileStoragePath string
 	Restore         bool
 }
 
-var Config config
+func New() Config {
+	cfg := Config{}
+	cfg.parseFlags()
+	cfg.parseEnv()
+	return cfg
 
-func Init() {
-	Config.parseFlags()
-	Config.parseEnv()
 }
-func (cfg *config) parseFlags() {
+func (cfg *Config) parseFlags() {
 	flag.StringVar(&cfg.ListenAddress, "a", "localhost:8080", "address and port to run server")
 	flag.IntVar(&cfg.StoreInterval, "i", 4, "interval after which server will write data to disk")
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metrics-db.json",
@@ -30,7 +31,7 @@ func (cfg *config) parseFlags() {
 	flag.Parse()
 }
 
-func (cfg *config) parseEnv() {
+func (cfg *Config) parseEnv() {
 	if envRunAddr := os.Getenv("ADDRESS"); envRunAddr != "" {
 		cfg.ListenAddress = envRunAddr
 	}
