@@ -3,7 +3,9 @@ package httplayer
 import (
 	"fmt"
 	"github.com/nktau/monitoring-service/internal/server/applayer"
+	"github.com/nktau/monitoring-service/internal/server/config"
 	"github.com/nktau/monitoring-service/internal/server/storagelayer"
+	"github.com/nktau/monitoring-service/internal/server/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -12,14 +14,17 @@ import (
 	"testing"
 )
 
-func TestUpdate(t *testing.T) {
+var logger = utils.InitLogger()
 
-	// create storage layer
-	storeLayer := storagelayer.New()
+var cfg config.Config
+
+func TestUpdate(t *testing.T) {
+	cfg = config.New()
+	storeLayer := storagelayer.New(logger, cfg)
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpAPI := New(appLayer)
+	httpAPI := New(appLayer, logger)
 	ts := httptest.NewServer(httpAPI.router)
 	defer ts.Close()
 
@@ -41,7 +46,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        200,
 				response:    "ok\n",
-				contentType: "text/plain",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -51,7 +56,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        200,
 				response:    "ok\n",
-				contentType: "text/plain",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
@@ -91,7 +96,7 @@ func TestUpdate(t *testing.T) {
 			want: want{
 				code:        http.StatusMethodNotAllowed,
 				response:    "",
-				contentType: "text/plain",
+				contentType: "",
 			},
 		},
 	}
@@ -119,13 +124,12 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
-
 	// create storage layer
-	storeLayer := storagelayer.New()
+	storeLayer := storagelayer.New(logger, cfg)
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpAPI := New(appLayer)
+	httpAPI := New(appLayer, logger)
 	ts := httptest.NewServer(httpAPI.router)
 	defer ts.Close()
 	testMetric := "testMetric"
@@ -159,7 +163,7 @@ func TestValue(t *testing.T) {
 			want: want{
 				code:        http.StatusOK,
 				response:    testMetricValue + "\n",
-				contentType: "text/plain",
+				contentType: "text/plain; charset=utf-8",
 			},
 		},
 		{
