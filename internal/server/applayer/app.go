@@ -21,6 +21,7 @@ type App interface {
 	GetAll() (map[string]float64, map[string]int64)
 	Update(metricType, metricName, metricValue string) error
 	Get(metricType, metricName string) (string, error)
+	Ping() error
 }
 
 func New(store storagelayer.MemStorage) *app {
@@ -88,4 +89,8 @@ func (app *app) Update(metricType, metricName, metricValue string) error {
 		}
 	}
 	return nil
+}
+
+func (app *app) Ping() error {
+	return app.store.CheckDBConnection()
 }

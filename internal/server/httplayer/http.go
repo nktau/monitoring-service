@@ -35,6 +35,7 @@ func New(appLayer applayer.App, logger *zap.Logger) httpAPI {
 	api.router.Get(fmt.Sprintf("/%s/*", handlePathValue), api.valuePlainText)
 	api.router.Post(fmt.Sprintf("/%s/*", handlePathValue), api.valueJSON)
 	api.router.Get("/", api.root)
+	api.router.Get("/ping", api.ping)
 	return api
 }
 
