@@ -1,9 +1,12 @@
 package storagelayer
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/nktau/monitoring-service/internal/server/config"
 	"github.com/nktau/monitoring-service/internal/server/utils"
 	"go.uber.org/zap"
@@ -24,6 +27,7 @@ type MemStorage interface {
 	GetCounter(string) (int64, error)
 	GetGauge(string) (float64, error)
 	GetAll() (map[string]float64, map[string]int64)
+	CheckDBConnection() error
 }
 
 var ErrMetricNotFound = errors.New("metric not found")
@@ -134,6 +138,23 @@ func (mem *memStorage) readFromDisk() error {
 	err := json.Unmarshal([]byte(utils.GetLastLineWithSeek(mem.config.FileStoragePath)), mem)
 	if err != nil {
 		mem.logger.Error("readFromDisk unmarshal err", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (mem *memStorage) CheckDBConnection() error {
+	db, err := sql.Open("pgx", mem.config.DatabaseDSN)
+	if err != nil {
+		mem.logger.Error("", zap.Error(err))
+		return err
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	if err = db.PingContext(ctx); err != nil {
+		mem.logger.Error("", zap.Error(err))
 		return err
 	}
 	return nil
