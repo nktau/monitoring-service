@@ -295,7 +295,6 @@ func (mem *memStorage) readFromDB() error {
 		mem.logger.Error("", zap.Error(err))
 		return err
 	}
-	fmt.Println(rows)
 	defer rows.Close()
 	for rows.Next() {
 		var m metrics
@@ -315,7 +314,11 @@ func (mem *memStorage) readFromDB() error {
 		if m.format == "counter" {
 			mem.Counter[m.name] = int64(m.value)
 		}
-
+	}
+	err = rows.Err()
+	if err != nil {
+		mem.logger.Error("", zap.Error(err))
+		return err
 	}
 
 	return nil

@@ -28,8 +28,7 @@ func (cfg *Config) parseFlags() {
 		"path to file in which server will store data")
 	flag.BoolVar(&cfg.Restore, "r", true,
 		"if false server will not restore data which it write before restart")
-	flag.StringVar(&cfg.DatabaseDSN, "d", "host=localhost user=monitoring_service "+
-		"password=monitoring_service_strong_password dbname=monitoring_service sslmode=disable",
+	flag.StringVar(&cfg.DatabaseDSN, "d", "",
 		"database dsn")
 	flag.Parse()
 }
