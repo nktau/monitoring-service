@@ -449,7 +449,7 @@ func (mem *memStorage) readFromDB() error {
 						fmt.Println(err)
 						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 							if count == 9 {
-								break
+								return err
 							}
 							continue
 						}
