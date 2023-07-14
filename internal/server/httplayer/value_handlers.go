@@ -13,6 +13,7 @@ import (
 
 func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	fmt.Println("I am here")
 	reader, err := api.readBody(r)
 	if err != nil {
 		api.logger.Error("can't decode request body", zap.Error(err))
