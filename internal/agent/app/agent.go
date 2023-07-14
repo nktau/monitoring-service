@@ -136,6 +136,23 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 		mem.logger.Error("can't send metric to the server",
 			zap.Error(err),
 			zap.String("request body: ", string(requestBody)))
+		count := 0
+		for {
+			time.Sleep(time.Second)
+			count++
+			fmt.Println(count)
+			if count == 1 || count == 4 || count == 9 {
+				res, err = http.DefaultClient.Do(req)
+				if err != nil {
+					continue
+				} else {
+					break
+				}
+			}
+			if count > 9 {
+				break
+			}
+		}
 		return err
 	}
 	err = req.Body.Close()

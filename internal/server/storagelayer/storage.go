@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/nktau/monitoring-service/internal/server/config"
 	"github.com/nktau/monitoring-service/internal/server/utils"
@@ -20,6 +22,10 @@ type memStorage struct {
 	Counter map[string]int64
 	logger  *zap.Logger
 	config  config.Config
+}
+
+func handlePostgresError(err error) {
+
 }
 
 type Metrics struct {
@@ -221,7 +227,32 @@ func (mem *memStorage) CheckDBConnection() error {
 	defer cancel()
 	if err = db.PingContext(ctx); err != nil {
 		mem.logger.Error("", zap.Error(err))
-		return err
+		if err != nil {
+			//var netErr *net.OpError
+			var pgErr *pgconn.PgError // IsConnectionException
+			if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+				count := 0
+				for {
+					time.Sleep(time.Second)
+					count++
+					if count == 1 || count == 4 || count == 9 {
+						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+						err = db.PingContext(ctx)
+						if err != nil {
+							if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+								continue
+							}
+						} else {
+							return nil
+						}
+					}
+					if count > 9 {
+						break
+					}
+				}
+			}
+			return err
+		}
 	}
 	return nil
 }
@@ -237,16 +268,45 @@ func (mem *memStorage) createDBScheme() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	_, err = db.ExecContext(ctx,
-		`CREATE TABLE IF NOT EXISTS metrics (
+	createTableQuery := `CREATE TABLE IF NOT EXISTS metrics (
 					   name character(50),
 					   type character(25),
 					   value double precision,
-    				   time_unix integer);`)
+    				   time_unix integer)`
+	_, err = db.ExecContext(ctx, createTableQuery)
+
 	if err != nil {
+		//var netErr *net.OpError
+		var pgErr *pgconn.PgError // IsConnectionException
+		if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+			count := 0
+			for {
+				time.Sleep(time.Second)
+				count++
+				fmt.Println(count)
+				if count == 1 || count == 4 || count == 9 {
+					ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+					_, err = db.ExecContext(ctx, createTableQuery)
+					if err != nil {
+						fmt.Println(err)
+						if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+							continue
+						}
+					} else {
+						return nil
+					}
+
+				}
+				if count > 9 {
+					break
+				}
+			}
+		}
 		mem.logger.Fatal("can't create db scheme", zap.Error(err))
 	}
+
 	return nil
+
 }
 
 func (mem *memStorage) writeToDB() error {
@@ -259,19 +319,74 @@ func (mem *memStorage) writeToDB() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	time := time.Now().Unix()
+	QueryTime := time.Now().Unix()
 	insertQuery := `insert into metrics ("name", "type", "value", "time_unix") values ($1, $2, $3, $4);`
 	for metricName, metricValue := range mem.Gauge {
-		_, err = db.ExecContext(ctx, insertQuery, metricName, "gauge", metricValue, time)
+		_, err = db.ExecContext(ctx, insertQuery, metricName, "gauge", metricValue, QueryTime)
+
 		if err != nil {
-			mem.logger.Error("can't insert data into database", zap.Error(err))
-			continue
+			//var netErr *net.OpError
+			var pgErr *pgconn.PgError // IsConnectionException
+			if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+				count := 0
+				for {
+					time.Sleep(time.Second)
+					count++
+					fmt.Println(count)
+					if count == 1 || count == 4 || count == 9 {
+						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+						_, err = db.ExecContext(ctx, insertQuery, metricName, "gauge", metricValue, QueryTime)
+						if err != nil {
+							fmt.Println(err)
+							if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+								continue
+							}
+						} else {
+							return nil
+						}
+					}
+					if count > 9 {
+						break
+					}
+				}
+			}
+			return err
 		}
+
+		//if err != nil {
+		//	mem.logger.Error("can't insert data into database", zap.Error(err))
+		//	continue
+		//}
 	}
 	for metricName, metricValue := range mem.Counter {
-		_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, time)
+		_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
 		if err != nil {
 			mem.logger.Error("can't insert data into database", zap.Error(err))
+			if err != nil {
+				//var netErr *net.OpError
+				var pgErr *pgconn.PgError // IsConnectionException
+				if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+					count := 0
+					for {
+						time.Sleep(time.Second)
+						count++
+						if count == 1 || count == 4 || count == 9 {
+							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+							_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
+							if err != nil {
+								if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+									continue
+								}
+							} else {
+								return nil
+							}
+						}
+						if count > 9 {
+							break
+						}
+					}
+				}
+			}
 			continue
 		}
 	}
@@ -294,12 +409,38 @@ func (mem *memStorage) readFromDB() error {
 	defer db.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	rows, err := db.QueryContext(ctx, "select m.name, m.type, m.value, m.time_unix from(select name, max(time_unix) "+
-		"as mx from metrics group by name) t join metrics m on m.name = t.name and t.mx = m.time_unix;")
+	selectQuery := `select m.name, m.type, m.value, m.time_unix from(select name, max(time_unix)
+					as mx from metrics group by name) t join metrics m on m.name = t.name and t.mx = m.time_unix;`
+	rows, err := db.QueryContext(ctx, selectQuery)
+
 	if err != nil {
-		mem.logger.Error("", zap.Error(err))
-		return err
+		//var netErr *net.OpError
+		var pgErr *pgconn.PgError // IsConnectionException
+		if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+			count := 0
+			for {
+				time.Sleep(time.Second)
+				count++
+				fmt.Println(count)
+				if count == 1 || count == 4 || count == 9 {
+					ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+					rows, err = db.QueryContext(ctx, selectQuery)
+					if err != nil {
+						fmt.Println(err)
+						if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+							continue
+						}
+					} else {
+						break
+					}
+				}
+				if count > 9 {
+					return err
+				}
+			}
+		}
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var m metrics
@@ -340,22 +481,71 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 		mem.logger.Error("", zap.Error(err))
 		return err
 	}
-	time := time.Now().Unix()
+	timeQuery := time.Now().Unix()
 	insertQuery := `insert into metrics ("name", "type", "value", "time_unix") values ($1, $2, $3, $4);`
 	for _, metric := range metrics {
-		// все изменения записываются в транзакцию
 		if metric.MType == "gauge" {
-			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, time)
+			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
 			if err != nil {
 				mem.logger.Error("", zap.Error(err))
+
+				var pgErr *pgconn.PgError // IsConnectionException
+				if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+					count := 0
+					for {
+						time.Sleep(time.Second)
+						count++
+						fmt.Println(count)
+						if count == 1 || count == 4 || count == 9 {
+							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+							_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
+							if err != nil {
+								fmt.Println(err)
+								if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+									continue
+								}
+							} else {
+								break
+							}
+						}
+						if count > 9 {
+							break
+						}
+					}
+				}
 				tx.Rollback()
 				return err
 			}
 		}
 		if metric.MType == "counter" {
-			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, time)
+			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, timeQuery)
 			if err != nil {
 				mem.logger.Error("", zap.Error(err))
+
+				var pgErr *pgconn.PgError // IsConnectionException
+				if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+					count := 0
+					for {
+						time.Sleep(time.Second)
+						count++
+						fmt.Println(count)
+						if count == 1 || count == 4 || count == 9 {
+							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+							_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, timeQuery)
+							if err != nil {
+								fmt.Println(err)
+								if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+									continue
+								}
+							} else {
+								break
+							}
+						}
+						if count > 9 {
+							break
+						}
+					}
+				}
 				tx.Rollback()
 				return err
 			}
