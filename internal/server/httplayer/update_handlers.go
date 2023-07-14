@@ -187,4 +187,5 @@ func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
 	//}
 	//fmt.Printf("updates() my answer on request with body %s\n is %s\n", string(body), string(responseBody))
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("{}"))
 }
