@@ -227,34 +227,33 @@ func (mem *memStorage) CheckDBConnection() error {
 	defer cancel()
 	if err = db.PingContext(ctx); err != nil {
 		mem.logger.Error("", zap.Error(err))
-		if err != nil {
-			//var netErr *net.OpError
-			var pgErr *pgconn.PgError // IsConnectionException
-			if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-				count := 0
-				for {
-					time.Sleep(time.Second)
-					count++
-					if count == 1 || count == 4 || count == 9 {
-						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
-						err = db.PingContext(ctx)
-						if err != nil {
-							cancel()
-							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-								continue
-							}
-						} else {
-							cancel()
-							return nil
+		//var netErr *net.OpError
+		var pgErr *pgconn.PgError // IsConnectionException
+		if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+			count := 0
+			for {
+				time.Sleep(time.Second)
+				count++
+				if count == 1 || count == 4 || count == 9 {
+					ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+					err = db.PingContext(ctx)
+					if err != nil {
+						cancel()
+						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+							continue
 						}
-					}
-					if count > 9 {
-						break
+					} else {
+						cancel()
+						return nil
 					}
 				}
+				if count == 9 {
+					break
+				}
 			}
-			return err
 		}
+		return err
+
 	}
 	return nil
 }
@@ -301,7 +300,7 @@ func (mem *memStorage) createDBScheme() error {
 					}
 
 				}
-				if count > 9 {
+				if count == 9 {
 					break
 				}
 			}
@@ -351,7 +350,7 @@ func (mem *memStorage) writeToDB() error {
 							return nil
 						}
 					}
-					if count > 9 {
+					if count == 9 {
 						break
 					}
 				}
@@ -368,33 +367,33 @@ func (mem *memStorage) writeToDB() error {
 		_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
 		if err != nil {
 			mem.logger.Error("can't insert data into database", zap.Error(err))
-			if err != nil {
-				//var netErr *net.OpError
-				var pgErr *pgconn.PgError // IsConnectionException
-				if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-					count := 0
-					for {
-						time.Sleep(time.Second)
-						count++
-						if count == 1 || count == 4 || count == 9 {
-							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
-							_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
-							if err != nil {
-								cancel()
-								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-									continue
-								}
-							} else {
-								cancel()
-								return nil
+
+			//var netErr *net.OpError
+			var pgErr *pgconn.PgError // IsConnectionException
+			if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+				count := 0
+				for {
+					time.Sleep(time.Second)
+					count++
+					if count == 1 || count == 4 || count == 9 {
+						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
+						_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
+						if err != nil {
+							cancel()
+							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+								continue
 							}
+						} else {
+							cancel()
+							return nil
 						}
-						if count > 9 {
-							break
-						}
+					}
+					if count == 9 {
+						break
 					}
 				}
 			}
+
 			continue
 		}
 	}
@@ -444,7 +443,7 @@ func (mem *memStorage) readFromDB() error {
 						break
 					}
 				}
-				if count > 9 {
+				if count == 9 {
 					return err
 				}
 			}
@@ -519,7 +518,7 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 								break
 							}
 						}
-						if count > 9 {
+						if count == 9 {
 							break
 						}
 					}
@@ -554,7 +553,7 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 								break
 							}
 						}
-						if count > 9 {
+						if count == 9 {
 							break
 						}
 					}
