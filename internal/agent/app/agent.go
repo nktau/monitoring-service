@@ -144,16 +144,6 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 			if count == 1 || count == 4 || count == 9 {
 				res, err = http.DefaultClient.Do(req)
 				if err != nil {
-					//err = res.Body.Close()
-					//if err != nil {
-					//	mem.logger.Error("can't close req body", zap.Error(err))
-					//	return err
-					//}
-					//err = res.Body.Close()
-					//if err != nil {
-					//	mem.logger.Error("can't close res body", zap.Error(err))
-					//	return err
-					//}
 					if count == 9 {
 						break
 					}
@@ -197,5 +187,4 @@ func (mem *memStorage) compress(data []byte) *bytes.Buffer {
 		mem.logger.Error("can't close gzip writer", zap.Error(err))
 	}
 	return &b
-
 }
