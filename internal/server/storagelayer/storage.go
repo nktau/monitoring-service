@@ -58,6 +58,7 @@ func New(logger *zap.Logger, config config.Config) *memStorage {
 		config:  config,
 	}
 	if config.Restore && config.DatabaseDSN != "" {
+		fmt.Println("mem.readFromDB()")
 		mem.readFromDB()
 	} else if config.Restore && config.FileStoragePath != "" {
 		mem.readFromDisk()
@@ -281,8 +282,8 @@ func (mem *memStorage) createDBScheme() error {
 
 	if err != nil {
 		//var netErr *net.OpError
-		var pgErr *pgconn.PgError // IsConnectionException
-		if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+		var pgErr *pgconn.PgError // IsConnectionException //IsInvalidCatalogName
+		if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
 			count := 0
 			for {
 				time.Sleep(time.Second)
@@ -294,7 +295,7 @@ func (mem *memStorage) createDBScheme() error {
 					if err != nil {
 						cancel()
 						fmt.Println(err)
-						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+						if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
 							if count == 9 {
 								break
 							}
