@@ -149,7 +149,6 @@ func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
 	}
 	var metrics []Metrics
 	var appMetrics []applayer.Metrics
-	fmt.Println(string(body))
 	err = json.Unmarshal(body, &metrics)
 
 	if err != nil {
@@ -186,6 +185,7 @@ func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
 		return
 	}
+	fmt.Printf("updates() my answer on request with body %s\n is %s\n", string(body), string(responseBody))
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseBody)
 }

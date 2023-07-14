@@ -72,7 +72,6 @@ func New(logger *zap.Logger, config config.Config) *memStorage {
 }
 
 func (mem *memStorage) GetCounter(metricName string) (metricValue int64, err error) {
-	fmt.Println("GetCounter ", mem.Counter)
 	value, ok := mem.Counter[metricName]
 	if ok {
 		return value, nil
@@ -149,7 +148,6 @@ func (mem *memStorage) Updates(metrics []Metrics) (err error) {
 			mem.Gauge[metric.ID] = *metric.Value
 		}
 		if metric.MType == "counter" {
-			fmt.Println("metricID: ", metric.ID, "metricValue:", metric.Delta)
 			mem.Counter[metric.ID] += *metric.Delta
 		}
 	}
@@ -164,7 +162,6 @@ func (mem *memStorage) Updates(metrics []Metrics) (err error) {
 			return err
 		}
 	}
-	fmt.Println(mem.Counter)
 	return nil
 
 }
