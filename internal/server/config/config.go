@@ -43,7 +43,6 @@ func (cfg *Config) parseEnv() {
 			cfg.StoreInterval = storeInterval
 		}
 	}
-
 	if value, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
 		cfg.FileStoragePath = value
 	}
@@ -57,5 +56,4 @@ func (cfg *Config) parseEnv() {
 	if value, ok := os.LookupEnv("DATABASE_DSN"); ok {
 		cfg.DatabaseDSN = value
 	}
-
 }

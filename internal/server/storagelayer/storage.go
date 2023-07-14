@@ -22,6 +22,16 @@ type memStorage struct {
 	config  config.Config
 }
 
+type metric struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+}
+type Metric metric
+
+type Metrics []metric
+
 type MemStorage interface {
 	UpdateCounter(string, int64) error
 	UpdateGauge(string, float64) error
@@ -29,6 +39,7 @@ type MemStorage interface {
 	GetGauge(string) (float64, error)
 	GetAll() (map[string]float64, map[string]int64)
 	CheckDBConnection() error
+	Updates(metric Metrics) error
 }
 
 var ErrMetricNotFound = errors.New("metric not found")
@@ -44,7 +55,6 @@ func New(logger *zap.Logger, config config.Config) *memStorage {
 		config:  config,
 	}
 	if config.Restore && config.DatabaseDSN != "" {
-		fmt.Println("read from db")
 		mem.readFromDB()
 	} else if config.Restore && config.FileStoragePath != "" {
 		mem.readFromDisk()
@@ -61,7 +71,6 @@ func New(logger *zap.Logger, config config.Config) *memStorage {
 			os.Remove(config.FileStoragePath)
 		}
 	}
-	fmt.Println(mem.Gauge, mem.Counter)
 	return mem
 }
 
@@ -117,6 +126,35 @@ func (mem *memStorage) UpdateCounter(metricName string, metricValue int64) (err 
 	mem.Counter[metricName] += metricValue
 	if mem.config.StoreInterval == 0 && mem.config.DatabaseDSN != "" {
 		err := mem.writeToDB()
+		if err != nil {
+			return err
+		}
+	} else if mem.config.StoreInterval == 0 && mem.config.FileStoragePath != "" {
+		err := mem.writeToDisk()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (mem *memStorage) Updates(metrics Metrics) (err error) {
+	defer func() {
+		rec := recover()
+		if rec != nil {
+			err = fmt.Errorf("error in storagelayer/Updates func %s", rec)
+		}
+	}()
+	for _, metric := range metrics {
+		if metric.MType == "gauge" {
+			mem.Gauge[metric.ID] = *metric.Value
+		}
+		if metric.MType == "counter" {
+			mem.Counter[metric.ID] = *metric.Delta
+		}
+	}
+	if mem.config.StoreInterval == 0 && mem.config.DatabaseDSN != "" {
+		err := mem.updatesWriteToDB(metrics)
 		if err != nil {
 			return err
 		}
@@ -241,7 +279,6 @@ func (mem *memStorage) writeToDB() error {
 	return nil
 }
 
-// Video — структура видео.
 type metrics struct {
 	name     string
 	format   string
@@ -249,38 +286,7 @@ type metrics struct {
 	timeUnix int
 }
 
-//func QueryVideos(ctx context.Context, db *sql.DB, limit int) ([]Video, error) {
-//	videos := make([]Video, 0, limit)
-//
-//	rows, err := db.QueryContext(ctx, "SELECT video_id, title, views from videos ORDER BY views LIMIT ?", limit)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	// обязательно закрываем перед возвратом функции
-//	defer rows.Close()
-//
-//	// пробегаем по всем записям
-//	for rows.Next() {
-//		var v Video
-//		err = rows.Scan(&v.Id, &v.Title, &v.Views)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		videos = append(videos, v)
-//	}
-//
-//	// проверяем на ошибки
-//	err = rows.Err()
-//	if err != nil {
-//		return nil, err
-//	}
-//	return videos, nil
-//}
-
 func (mem *memStorage) readFromDB() error {
-	//select * from metrics where time_unix = (select max(time_unix) from metrics) ;
 	db, err := sql.Open("pgx", mem.config.DatabaseDSN)
 	if err != nil {
 		mem.logger.Error("", zap.Error(err))
@@ -305,10 +311,7 @@ func (mem *memStorage) readFromDB() error {
 		}
 		m.name = strings.Trim(m.name, " ")
 		m.format = strings.Trim(m.format, " ")
-		fmt.Println(m.format)
-		fmt.Println(len(m.format))
 		if m.format == "gauge" {
-			fmt.Println("m.format == \"gauge\"")
 			mem.Gauge[m.name] = m.value
 		}
 		if m.format == "counter" {
@@ -320,6 +323,49 @@ func (mem *memStorage) readFromDB() error {
 		mem.logger.Error("", zap.Error(err))
 		return err
 	}
+	return nil
+}
 
+func (mem *memStorage) updatesWriteToDB(metrics Metrics) error {
+	db, err := sql.Open("pgx", mem.config.DatabaseDSN)
+	if err != nil {
+		mem.logger.Error("", zap.Error(err))
+		return err
+	}
+	defer db.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	// начинаем транзакцию
+	tx, err := db.Begin()
+	if err != nil {
+		mem.logger.Error("", zap.Error(err))
+		return err
+	}
+	time := time.Now().Unix()
+	insertQuery := `insert into metrics ("name", "type", "value", "time_unix") values ($1, $2, $3, $4);`
+	for _, metric := range metrics {
+		// все изменения записываются в транзакцию
+		if metric.MType == "gauge" {
+			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, time)
+			if err != nil {
+				mem.logger.Error("", zap.Error(err))
+				tx.Rollback()
+				return err
+			}
+		}
+		if metric.MType == "counter" {
+			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, time)
+			if err != nil {
+				mem.logger.Error("", zap.Error(err))
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		mem.logger.Error("", zap.Error(err))
+		return err
+	}
 	return nil
 }

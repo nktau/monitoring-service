@@ -84,9 +84,11 @@ func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
 	tmpGaugeMap["RandomValue"] = rand.Float64()
 	mem.Gauge = append(mem.Gauge, tmpGaugeMap)
 	mem.Counter = mem.Counter + 1
+	//fmt.Println(mem.Gauge)
 }
 
 func (mem *memStorage) SendRuntimeMetric(serverURL string) {
+	var metrics []Metrics
 	for _, gauge := range mem.Gauge {
 		for metricName, metricValue := range gauge {
 			metric := Metrics{
@@ -94,32 +96,31 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				MType: "gauge",
 				Value: &metricValue,
 			}
-			err := mem.makeAndDoRequest(metric, serverURL)
-			if err != nil {
-				continue
-			}
+			metrics = append(metrics, metric)
 		}
-		metric := Metrics{
-			ID:    "PollCount",
-			MType: "counter",
-			Delta: &mem.Counter,
-		}
-		err := mem.makeAndDoRequest(metric, serverURL)
-		if err != nil {
-			continue
-		}
+
+	}
+	metric := Metrics{
+		ID:    "PollCount",
+		MType: "counter",
+		Delta: &mem.Counter,
+	}
+	metrics = append(metrics, metric)
+	err := mem.makeAndDoRequest(metrics, serverURL)
+	if err != nil {
+		fmt.Println(err)
 	}
 }
 
-func (mem *memStorage) makeAndDoRequest(metric Metrics, serverURL string) error {
-	requestBody, err := json.Marshal(metric)
+func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) error {
+	requestBody, err := json.Marshal(metrics)
 	if err != nil {
 		mem.logger.Error("can't create request body json", zap.Error(err))
 		return err
 	}
 	compressedRequestBody := mem.compress(requestBody)
 	req, err := http.NewRequest(http.MethodPost,
-		fmt.Sprintf("%s/update/", serverURL),
+		fmt.Sprintf("%s/updates", serverURL),
 		compressedRequestBody)
 	if err != nil {
 		mem.logger.Error("can't create request",
