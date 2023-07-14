@@ -174,8 +174,7 @@ func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var errFromAppLayer error
-	errFromAppLayer = api.app.Updates(applayer.Metrics(metrics))
+	errFromAppLayer := api.app.Updates(applayer.Metrics(metrics))
 	err = handleApplayerUpdateError(errFromAppLayer, w)
 	if err != nil {
 		return

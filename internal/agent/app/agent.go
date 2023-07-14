@@ -120,7 +120,7 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 	}
 	compressedRequestBody := mem.compress(requestBody)
 	req, err := http.NewRequest(http.MethodPost,
-		fmt.Sprintf("%s/updates", serverURL),
+		fmt.Sprintf("%s/updates/", serverURL),
 		compressedRequestBody)
 	if err != nil {
 		mem.logger.Error("can't create request",
