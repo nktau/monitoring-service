@@ -24,10 +24,6 @@ type memStorage struct {
 	config  config.Config
 }
 
-func handlePostgresError(err error) {
-
-}
-
 type Metrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -464,6 +460,7 @@ func (mem *memStorage) readFromDB() error {
 				}
 			}
 		}
+		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
