@@ -451,6 +451,7 @@ func (mem *memStorage) readFromDB() error {
 							continue
 						}
 					}
+					cancel()
 					for rows.Next() {
 						var m metrics
 						err = rows.Scan(&m.name, &m.format, &m.value, &m.timeUnix)
