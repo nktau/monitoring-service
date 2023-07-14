@@ -230,7 +230,7 @@ func (mem *memStorage) CheckDBConnection() error {
 		if err != nil {
 			//var netErr *net.OpError
 			var pgErr *pgconn.PgError // IsConnectionException
-			if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+			if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 				count := 0
 				for {
 					time.Sleep(time.Second)
@@ -239,10 +239,12 @@ func (mem *memStorage) CheckDBConnection() error {
 						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 						err = db.PingContext(ctx)
 						if err != nil {
-							if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+							cancel()
+							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 								continue
 							}
 						} else {
+							cancel()
 							return nil
 						}
 					}
@@ -278,7 +280,7 @@ func (mem *memStorage) createDBScheme() error {
 	if err != nil {
 		//var netErr *net.OpError
 		var pgErr *pgconn.PgError // IsConnectionException
-		if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+		if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 			count := 0
 			for {
 				time.Sleep(time.Second)
@@ -288,11 +290,13 @@ func (mem *memStorage) createDBScheme() error {
 					ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 					_, err = db.ExecContext(ctx, createTableQuery)
 					if err != nil {
+						cancel()
 						fmt.Println(err)
-						if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 							continue
 						}
 					} else {
+						cancel()
 						return nil
 					}
 
@@ -327,7 +331,7 @@ func (mem *memStorage) writeToDB() error {
 		if err != nil {
 			//var netErr *net.OpError
 			var pgErr *pgconn.PgError // IsConnectionException
-			if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+			if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 				count := 0
 				for {
 					time.Sleep(time.Second)
@@ -337,11 +341,13 @@ func (mem *memStorage) writeToDB() error {
 						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 						_, err = db.ExecContext(ctx, insertQuery, metricName, "gauge", metricValue, QueryTime)
 						if err != nil {
+							cancel()
 							fmt.Println(err)
-							if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 								continue
 							}
 						} else {
+							cancel()
 							return nil
 						}
 					}
@@ -365,7 +371,7 @@ func (mem *memStorage) writeToDB() error {
 			if err != nil {
 				//var netErr *net.OpError
 				var pgErr *pgconn.PgError // IsConnectionException
-				if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+				if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 					count := 0
 					for {
 						time.Sleep(time.Second)
@@ -374,10 +380,12 @@ func (mem *memStorage) writeToDB() error {
 							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 							_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
 							if err != nil {
-								if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+								cancel()
+								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 									continue
 								}
 							} else {
+								cancel()
 								return nil
 							}
 						}
@@ -416,7 +424,7 @@ func (mem *memStorage) readFromDB() error {
 	if err != nil {
 		//var netErr *net.OpError
 		var pgErr *pgconn.PgError // IsConnectionException
-		if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+		if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 			count := 0
 			for {
 				time.Sleep(time.Second)
@@ -426,11 +434,13 @@ func (mem *memStorage) readFromDB() error {
 					ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 					rows, err = db.QueryContext(ctx, selectQuery)
 					if err != nil {
+						cancel()
 						fmt.Println(err)
-						if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 							continue
 						}
 					} else {
+						cancel()
 						break
 					}
 				}
@@ -440,7 +450,6 @@ func (mem *memStorage) readFromDB() error {
 			}
 		}
 	}
-
 	defer rows.Close()
 	for rows.Next() {
 		var m metrics
@@ -490,7 +499,7 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 				mem.logger.Error("", zap.Error(err))
 
 				var pgErr *pgconn.PgError // IsConnectionException
-				if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+				if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 					count := 0
 					for {
 						time.Sleep(time.Second)
@@ -500,11 +509,13 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 							_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
 							if err != nil {
+								cancel()
 								fmt.Println(err)
-								if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 									continue
 								}
 							} else {
+								cancel()
 								break
 							}
 						}
@@ -523,7 +534,7 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 				mem.logger.Error("", zap.Error(err))
 
 				var pgErr *pgconn.PgError // IsConnectionException
-				if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+				if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 					count := 0
 					for {
 						time.Sleep(time.Second)
@@ -534,10 +545,12 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 							_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, timeQuery)
 							if err != nil {
 								fmt.Println(err)
-								if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+								cancel()
+								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 									continue
 								}
 							} else {
+								cancel()
 								break
 							}
 						}
