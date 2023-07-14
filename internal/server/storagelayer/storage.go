@@ -450,10 +450,31 @@ func (mem *memStorage) readFromDB() error {
 							}
 							continue
 						}
-					} else {
-						cancel()
-						break
 					}
+					for rows.Next() {
+						var m metrics
+						err = rows.Scan(&m.name, &m.format, &m.value, &m.timeUnix)
+						if err != nil {
+							mem.logger.Error("", zap.Error(err))
+							return err
+						}
+						m.name = strings.Trim(m.name, " ")
+						m.format = strings.Trim(m.format, " ")
+						if m.format == "gauge" {
+							mem.Gauge[m.name] = m.value
+						}
+						if m.format == "counter" {
+							mem.Counter[m.name] = int64(m.value)
+						}
+					}
+					err = rows.Err()
+					if err != nil {
+						rows.Close()
+						mem.logger.Error("", zap.Error(err))
+						return err
+					}
+					rows.Close()
+					return nil
 				}
 				if count == 9 {
 					return err
