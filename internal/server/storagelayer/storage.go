@@ -22,15 +22,12 @@ type memStorage struct {
 	config  config.Config
 }
 
-type metric struct {
+type Metrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
-type Metric metric
-
-type Metrics []metric
 
 type MemStorage interface {
 	UpdateCounter(string, int64) error
@@ -39,7 +36,7 @@ type MemStorage interface {
 	GetGauge(string) (float64, error)
 	GetAll() (map[string]float64, map[string]int64)
 	CheckDBConnection() error
-	Updates(metric Metrics) error
+	Updates(metric []Metrics) error
 }
 
 var ErrMetricNotFound = errors.New("metric not found")
@@ -139,7 +136,7 @@ func (mem *memStorage) UpdateCounter(metricName string, metricValue int64) (err 
 	return nil
 }
 
-func (mem *memStorage) Updates(metrics Metrics) (err error) {
+func (mem *memStorage) Updates(metrics []Metrics) (err error) {
 	defer func() {
 		rec := recover()
 		if rec != nil {
@@ -331,7 +328,7 @@ func (mem *memStorage) readFromDB() error {
 	return nil
 }
 
-func (mem *memStorage) updatesWriteToDB(metrics Metrics) error {
+func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 	db, err := sql.Open("pgx", mem.config.DatabaseDSN)
 	if err != nil {
 		mem.logger.Error("", zap.Error(err))

@@ -25,7 +25,7 @@ func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 		api.logger.Info("can't read request body", zap.Error(err))
 		return
 	}
-	var metric Metric
+	var metric Metrics
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
 		http.Error(w, "invalid json data", http.StatusBadRequest)
@@ -147,7 +147,8 @@ func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
 		api.logger.Info("can't read request body", zap.Error(err))
 		return
 	}
-	var metrics Metrics
+	var metrics []Metrics
+	var appMetrics []applayer.Metrics
 	fmt.Println(string(body))
 	err = json.Unmarshal(body, &metrics)
 
@@ -172,9 +173,10 @@ func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
 			return
 		}
+		appMetrics = append(appMetrics, applayer.Metrics(metric))
 	}
 
-	errFromAppLayer := api.app.Updates(applayer.Metrics(metrics))
+	errFromAppLayer := api.app.Updates(appMetrics)
 	err = handleApplayerUpdateError(errFromAppLayer, w)
 	if err != nil {
 		return
