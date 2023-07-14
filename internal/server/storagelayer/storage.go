@@ -240,6 +240,9 @@ func (mem *memStorage) CheckDBConnection() error {
 					if err != nil {
 						cancel()
 						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+							if count == 9 {
+								break
+							}
 							continue
 						}
 					} else {
@@ -292,6 +295,9 @@ func (mem *memStorage) createDBScheme() error {
 						cancel()
 						fmt.Println(err)
 						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+							if count == 9 {
+								break
+							}
 							continue
 						}
 					} else {
@@ -343,6 +349,9 @@ func (mem *memStorage) writeToDB() error {
 							cancel()
 							fmt.Println(err)
 							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+								if count == 9 {
+									break
+								}
 								continue
 							}
 						} else {
@@ -381,6 +390,9 @@ func (mem *memStorage) writeToDB() error {
 						if err != nil {
 							cancel()
 							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+								if count == 9 {
+									break
+								}
 								continue
 							}
 						} else {
@@ -436,6 +448,9 @@ func (mem *memStorage) readFromDB() error {
 						cancel()
 						fmt.Println(err)
 						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+							if count == 9 {
+								break
+							}
 							continue
 						}
 					} else {
@@ -511,6 +526,9 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 								cancel()
 								fmt.Println(err)
 								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+									if count == 9 {
+										break
+									}
 									continue
 								}
 							} else {
@@ -546,6 +564,9 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 								fmt.Println(err)
 								cancel()
 								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
+									if count == 9 {
+										break
+									}
 									continue
 								}
 							} else {

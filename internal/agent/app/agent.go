@@ -140,21 +140,23 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 		for {
 			time.Sleep(time.Second)
 			count++
-			fmt.Println(count)
+			fmt.Println("this ", count)
 			if count == 1 || count == 4 || count == 9 {
 				res, err = http.DefaultClient.Do(req)
 				if err != nil {
-					err = res.Body.Close()
-					if err != nil {
-						mem.logger.Error("can't close req body", zap.Error(err))
-						return err
+					//err = res.Body.Close()
+					//if err != nil {
+					//	mem.logger.Error("can't close req body", zap.Error(err))
+					//	return err
+					//}
+					//err = res.Body.Close()
+					//if err != nil {
+					//	mem.logger.Error("can't close res body", zap.Error(err))
+					//	return err
+					//}
+					if count == 9 {
+						break
 					}
-					err = res.Body.Close()
-					if err != nil {
-						mem.logger.Error("can't close res body", zap.Error(err))
-						return err
-					}
-					continue
 				} else {
 					err = res.Body.Close()
 					if err != nil {
@@ -168,9 +170,6 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 					}
 					break
 				}
-			}
-			if count == 9 {
-				break
 			}
 		}
 		return err
