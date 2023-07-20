@@ -54,7 +54,7 @@ func New(logger *zap.Logger, config config.Config) *memStorage {
 		config:  config,
 	}
 	if config.Restore && config.DatabaseDSN != "" {
-		fmt.Println("mem.readFromDB()")
+		mem.logger.Info("mem.readFromDB()")
 		mem.readFromDB()
 	} else if config.Restore && config.FileStoragePath != "" {
 		mem.readFromDisk()
@@ -166,7 +166,6 @@ func (mem *memStorage) Updates(metrics []Metrics) (err error) {
 		}
 	}
 	return nil
-
 }
 
 func (mem *memStorage) storeDataWithStoreInterval(dataPath string) error {
@@ -212,6 +211,38 @@ func (mem *memStorage) readFromDisk() error {
 	return nil
 }
 
+func (mem *memStorage) retryExecContext(err error, execContext func(ctx context.Context, query string, arg ...any) (sql.Result, error), query string, args ...any) error {
+	var pgErr *pgconn.PgError // IsConnectionException //IsInvalidCatalogName
+	if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+		count := 0
+		for {
+			time.Sleep(time.Second)
+			count++
+			if count == 1 || count == 4 || count == 9 {
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				_, err = execContext(ctx, query, args)
+				if err != nil {
+					mem.logger.Error("", zap.Error(err))
+					cancel()
+					if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
+						if count == 9 {
+							return err
+						}
+						continue
+					}
+				} else {
+					cancel()
+					return nil
+				}
+			}
+			if count == 9 {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (mem *memStorage) CheckDBConnection() error {
 	db, err := sql.Open("pgx", mem.config.DatabaseDSN)
 	if err != nil {
@@ -224,7 +255,6 @@ func (mem *memStorage) CheckDBConnection() error {
 	defer cancel()
 	if err = db.PingContext(ctx); err != nil {
 		mem.logger.Error("", zap.Error(err))
-		//var netErr *net.OpError
 		var pgErr *pgconn.PgError // IsConnectionException
 		if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 			count := 0
@@ -253,7 +283,6 @@ func (mem *memStorage) CheckDBConnection() error {
 			}
 		}
 		return err
-
 	}
 	return nil
 }
@@ -277,42 +306,13 @@ func (mem *memStorage) createDBScheme() error {
 	_, err = db.ExecContext(ctx, createTableQuery)
 
 	if err != nil {
-		//var netErr *net.OpError
-		var pgErr *pgconn.PgError // IsConnectionException //IsInvalidCatalogName
-		if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
-			count := 0
-			for {
-				time.Sleep(time.Second)
-				count++
-				fmt.Println(count)
-				if count == 1 || count == 4 || count == 9 {
-					ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
-					_, err = db.ExecContext(ctx, createTableQuery)
-					if err != nil {
-						cancel()
-						fmt.Println(err)
-						if errors.As(err, &pgErr) && pgerrcode.IsInvalidCatalogName(pgErr.Code) {
-							if count == 9 {
-								break
-							}
-							continue
-						}
-					} else {
-						cancel()
-						return nil
-					}
-
-				}
-				if count == 9 {
-					break
-				}
-			}
+		errAfterRetry := mem.retryExecContext(err, db.ExecContext, createTableQuery, "")
+		if errAfterRetry != nil {
+			mem.logger.Fatal("can't create db scheme", zap.Error(err))
 		}
-		mem.logger.Fatal("can't create db scheme", zap.Error(err))
 	}
 
 	return nil
-
 }
 
 func (mem *memStorage) writeToDB() error {
@@ -329,81 +329,20 @@ func (mem *memStorage) writeToDB() error {
 	insertQuery := `insert into metrics ("name", "type", "value", "time_unix") values ($1, $2, $3, $4);`
 	for metricName, metricValue := range mem.Gauge {
 		_, err = db.ExecContext(ctx, insertQuery, metricName, "gauge", metricValue, QueryTime)
-
 		if err != nil {
-			//var netErr *net.OpError
-			var pgErr *pgconn.PgError // IsConnectionException
-			if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-				count := 0
-				for {
-					time.Sleep(time.Second)
-					count++
-					fmt.Println(count)
-					if count == 1 || count == 4 || count == 9 {
-						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
-						_, err = db.ExecContext(ctx, insertQuery, metricName, "gauge", metricValue, QueryTime)
-						if err != nil {
-							cancel()
-							fmt.Println(err)
-							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-								if count == 9 {
-									break
-								}
-								continue
-							}
-						} else {
-							cancel()
-							return nil
-						}
-					}
-					if count == 9 {
-						break
-					}
-				}
+			errAfterRetry := mem.retryExecContext(err, db.ExecContext, insertQuery, metricName, "gauge", metricValue, QueryTime)
+			if errAfterRetry != nil {
+				mem.logger.Error("", zap.Error(err))
 			}
-			return err
 		}
-
-		//if err != nil {
-		//	mem.logger.Error("can't insert data into database", zap.Error(err))
-		//	continue
-		//}
 	}
 	for metricName, metricValue := range mem.Counter {
 		_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
 		if err != nil {
-			mem.logger.Error("can't insert data into database", zap.Error(err))
-
-			//var netErr *net.OpError
-			var pgErr *pgconn.PgError // IsConnectionException
-			if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-				count := 0
-				for {
-					time.Sleep(time.Second)
-					count++
-					if count == 1 || count == 4 || count == 9 {
-						ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
-						_, err = db.ExecContext(ctx, insertQuery, metricName, "counter", metricValue, QueryTime)
-						if err != nil {
-							cancel()
-							if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-								if count == 9 {
-									break
-								}
-								continue
-							}
-						} else {
-							cancel()
-							return nil
-						}
-					}
-					if count == 9 {
-						break
-					}
-				}
+			errAfterRetry := mem.retryExecContext(err, db.ExecContext, insertQuery, metricName, "gauge", metricValue, QueryTime)
+			if errAfterRetry != nil {
+				mem.logger.Error("", zap.Error(err))
 			}
-
-			continue
 		}
 	}
 	return nil
@@ -430,20 +369,17 @@ func (mem *memStorage) readFromDB() error {
 	rows, err := db.QueryContext(ctx, selectQuery)
 
 	if err != nil {
-		//var netErr *net.OpError
 		var pgErr *pgconn.PgError // IsConnectionException
 		if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 			count := 0
 			for {
 				time.Sleep(time.Second)
 				count++
-				fmt.Println(count)
 				if count == 1 || count == 4 || count == 9 {
 					ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
 					rows, err = db.QueryContext(ctx, selectQuery)
 					if err != nil {
 						cancel()
-						fmt.Println(err)
 						if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
 							if count == 9 {
 								return err
@@ -518,7 +454,6 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 	defer db.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	// начинаем транзакцию
 	tx, err := db.Begin()
 	if err != nil {
 		mem.logger.Error("", zap.Error(err))
@@ -530,77 +465,23 @@ func (mem *memStorage) updatesWriteToDB(metrics []Metrics) error {
 		if metric.MType == "gauge" {
 			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
 			if err != nil {
-				mem.logger.Error("", zap.Error(err))
-
-				var pgErr *pgconn.PgError // IsConnectionException
-				if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-					count := 0
-					for {
-						time.Sleep(time.Second)
-						count++
-						fmt.Println(count)
-						if count == 1 || count == 4 || count == 9 {
-							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
-							_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
-							if err != nil {
-								cancel()
-								fmt.Println(err)
-								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-									if count == 9 {
-										break
-									}
-									continue
-								}
-							} else {
-								cancel()
-								break
-							}
-						}
-						if count == 9 {
-							break
-						}
-					}
+				errAfterRetry := mem.retryExecContext(err, tx.ExecContext, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
+				if errAfterRetry != nil {
+					mem.logger.Fatal("", zap.Error(errAfterRetry))
+					tx.Rollback()
+					return errAfterRetry
 				}
-				tx.Rollback()
-				return err
 			}
 		}
 		if metric.MType == "counter" {
 			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, timeQuery)
 			if err != nil {
-				mem.logger.Error("", zap.Error(err))
-
-				var pgErr *pgconn.PgError // IsConnectionException
-				if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-					count := 0
-					for {
-						time.Sleep(time.Second)
-						count++
-						fmt.Println(count)
-						if count == 1 || count == 4 || count == 9 {
-							ctx, cancel = context.WithTimeout(context.Background(), 1*time.Second)
-							_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, timeQuery)
-							if err != nil {
-								fmt.Println(err)
-								cancel()
-								if errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code) {
-									if count == 9 {
-										break
-									}
-									continue
-								}
-							} else {
-								cancel()
-								break
-							}
-						}
-						if count == 9 {
-							break
-						}
-					}
+				errAfterRetry := mem.retryExecContext(err, tx.ExecContext, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
+				if errAfterRetry != nil {
+					mem.logger.Fatal("", zap.Error(errAfterRetry))
+					tx.Rollback()
+					return errAfterRetry
 				}
-				tx.Rollback()
-				return err
 			}
 		}
 	}
