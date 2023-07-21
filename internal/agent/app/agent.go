@@ -84,7 +84,6 @@ func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
 	tmpGaugeMap["RandomValue"] = rand.Float64()
 	mem.Gauge = append(mem.Gauge, tmpGaugeMap)
 	mem.Counter = mem.Counter + 1
-	//fmt.Println(mem.Gauge)
 }
 
 func (mem *memStorage) SendRuntimeMetric(serverURL string) {
@@ -108,7 +107,7 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 	metrics = append(metrics, metric)
 	err := mem.makeAndDoRequest(metrics, serverURL)
 	if err != nil {
-		fmt.Println(err)
+		mem.logger.Error("", zap.Error(err))
 	}
 }
 
@@ -140,7 +139,6 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 		for {
 			time.Sleep(time.Second)
 			count++
-			fmt.Println("this ", count)
 			if count == 1 || count == 4 || count == 9 {
 				res, err = http.DefaultClient.Do(req)
 				if err != nil {
@@ -148,7 +146,7 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 						break
 					}
 				} else {
-					err = res.Body.Close()
+					err = req.Body.Close()
 					if err != nil {
 						mem.logger.Error("can't close req body", zap.Error(err))
 						return err
