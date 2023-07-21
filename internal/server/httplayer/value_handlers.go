@@ -27,7 +27,7 @@ func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	api.logger.Debug("body:", zap.String("body", string(body)))
-	var metric metrics
+	var metric utils.Metrics
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
 		http.Error(w, "invalid json data", http.StatusBadRequest)

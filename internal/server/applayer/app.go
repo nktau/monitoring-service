@@ -12,7 +12,6 @@ var ErrMetricNotFound = storagelayer.ErrMetricNotFound     // http.StatusNotFoun
 var ErrWrongMetricType = errors.New("wrong metric type")   // http.StatusBadRequest
 var ErrWrongMetricName = errors.New("wrong metric name")   // http.StatusNotFound
 var ErrWrongMetricValue = errors.New("wrong metric value") // http.StatusBadRequest
-
 type app struct {
 	store storagelayer.MemStorage
 }
@@ -21,6 +20,8 @@ type App interface {
 	GetAll() (map[string]float64, map[string]int64)
 	Update(metricType, metricName, metricValue string) error
 	Get(metricType, metricName string) (string, error)
+	Ping() error
+	Updates(metric []utils.Metrics) error
 }
 
 func New(store storagelayer.MemStorage) *app {
@@ -88,4 +89,22 @@ func (app *app) Update(metricType, metricName, metricValue string) error {
 		}
 	}
 	return nil
+}
+
+func (app *app) Updates(metrics []utils.Metrics) error {
+	for _, metric := range metrics {
+		err := checkIfWrongMetricType(metric.MType)
+		if err != nil {
+			return err
+		}
+	}
+	err := app.store.Updates(metrics)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (app *app) Ping() error {
+	return app.store.CheckDBConnection()
 }

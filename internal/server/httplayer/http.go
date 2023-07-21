@@ -15,6 +15,7 @@ import (
 
 const handlePathUpdate = "update"
 const handlePathValue = "value"
+const handlePathUpdates = "updates"
 
 type httpAPI struct {
 	app    applayer.App
@@ -33,8 +34,11 @@ func New(appLayer applayer.App, logger *zap.Logger) httpAPI {
 	api.router.Use(middleware.Compress(5, "application/json", "text/html"))
 	api.router.Post(fmt.Sprintf("/%s/*", handlePathUpdate), api.whichOfUpdateHandlerUse)
 	api.router.Get(fmt.Sprintf("/%s/*", handlePathValue), api.valuePlainText)
+	api.router.Post(fmt.Sprintf("/%s/*", handlePathUpdates), api.updates)
 	api.router.Post(fmt.Sprintf("/%s/*", handlePathValue), api.valueJSON)
 	api.router.Get("/", api.root)
+	api.router.Get("/ping", api.ping)
+
 	return api
 }
 
@@ -62,11 +66,4 @@ func (api *httpAPI) readBody(r *http.Request) (io.Reader, error) {
 		reader = r.Body
 	}
 	return reader, nil
-}
-
-type metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }

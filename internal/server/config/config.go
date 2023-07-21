@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"strconv"
 )
@@ -12,6 +11,7 @@ type Config struct {
 	StoreInterval   int
 	FileStoragePath string
 	Restore         bool
+	DatabaseDSN     string
 }
 
 func New() Config {
@@ -28,6 +28,8 @@ func (cfg *Config) parseFlags() {
 		"path to file in which server will store data")
 	flag.BoolVar(&cfg.Restore, "r", true,
 		"if false server will not restore data which it write before restart")
+	flag.StringVar(&cfg.DatabaseDSN, "d", "",
+		"database dsn")
 	flag.Parse()
 }
 
@@ -41,16 +43,17 @@ func (cfg *Config) parseEnv() {
 			cfg.StoreInterval = storeInterval
 		}
 	}
-
 	if value, ok := os.LookupEnv("FILE_STORAGE_PATH"); ok {
 		cfg.FileStoragePath = value
 	}
-	fmt.Println(cfg.FileStoragePath)
 
 	if envRestore := os.Getenv("RESTORE"); envRestore != "" {
 		restore, err := strconv.ParseBool(envRestore)
 		if err == nil {
 			cfg.Restore = restore
 		}
+	}
+	if value, ok := os.LookupEnv("DATABASE_DSN"); ok {
+		cfg.DatabaseDSN = value
 	}
 }

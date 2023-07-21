@@ -87,6 +87,7 @@ func (mem *memStorage) GetRuntimeMetrics(reportInterval int64) {
 }
 
 func (mem *memStorage) SendRuntimeMetric(serverURL string) {
+	var metrics []Metrics
 	for _, gauge := range mem.Gauge {
 		for metricName, metricValue := range gauge {
 			metric := Metrics{
@@ -94,32 +95,31 @@ func (mem *memStorage) SendRuntimeMetric(serverURL string) {
 				MType: "gauge",
 				Value: &metricValue,
 			}
-			err := mem.makeAndDoRequest(metric, serverURL)
-			if err != nil {
-				continue
-			}
+			metrics = append(metrics, metric)
 		}
-		metric := Metrics{
-			ID:    "PollCount",
-			MType: "counter",
-			Delta: &mem.Counter,
-		}
-		err := mem.makeAndDoRequest(metric, serverURL)
-		if err != nil {
-			continue
-		}
+
+	}
+	metric := Metrics{
+		ID:    "PollCount",
+		MType: "counter",
+		Delta: &mem.Counter,
+	}
+	metrics = append(metrics, metric)
+	err := mem.makeAndDoRequest(metrics, serverURL)
+	if err != nil {
+		mem.logger.Error("", zap.Error(err))
 	}
 }
 
-func (mem *memStorage) makeAndDoRequest(metric Metrics, serverURL string) error {
-	requestBody, err := json.Marshal(metric)
+func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) error {
+	requestBody, err := json.Marshal(metrics)
 	if err != nil {
 		mem.logger.Error("can't create request body json", zap.Error(err))
 		return err
 	}
 	compressedRequestBody := mem.compress(requestBody)
 	req, err := http.NewRequest(http.MethodPost,
-		fmt.Sprintf("%s/update/", serverURL),
+		fmt.Sprintf("%s/updates/", serverURL),
 		compressedRequestBody)
 	if err != nil {
 		mem.logger.Error("can't create request",
@@ -135,6 +135,31 @@ func (mem *memStorage) makeAndDoRequest(metric Metrics, serverURL string) error 
 		mem.logger.Error("can't send metric to the server",
 			zap.Error(err),
 			zap.String("request body: ", string(requestBody)))
+		count := 0
+		for {
+			time.Sleep(time.Second)
+			count++
+			if count == 1 || count == 4 || count == 9 {
+				res, err = http.DefaultClient.Do(req)
+				if err != nil {
+					if count == 9 {
+						break
+					}
+				} else {
+					err = req.Body.Close()
+					if err != nil {
+						mem.logger.Error("can't close req body", zap.Error(err))
+						return err
+					}
+					err = res.Body.Close()
+					if err != nil {
+						mem.logger.Error("can't close res body", zap.Error(err))
+						return err
+					}
+					break
+				}
+			}
+		}
 		return err
 	}
 	err = req.Body.Close()
@@ -160,5 +185,4 @@ func (mem *memStorage) compress(data []byte) *bytes.Buffer {
 		mem.logger.Error("can't close gzip writer", zap.Error(err))
 	}
 	return &b
-
 }

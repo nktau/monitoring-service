@@ -25,7 +25,7 @@ func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 		api.logger.Info("can't read request body", zap.Error(err))
 		return
 	}
-	var metric metrics
+	var metric utils.Metrics
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
 		http.Error(w, "invalid json data", http.StatusBadRequest)
@@ -130,4 +130,62 @@ func (api *httpAPI) whichOfUpdateHandlerUse(w http.ResponseWriter, r *http.Reque
 	} else {
 		api.updatePlainText(w, r)
 	}
+}
+
+func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	reader, err := api.readBody(r)
+	if err != nil {
+		api.logger.Error("can't decode request body", zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	body, err := io.ReadAll(reader)
+	r.Body.Close()
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		api.logger.Info("can't read request body", zap.Error(err))
+		return
+	}
+	var metrics []utils.Metrics
+	var appMetrics []utils.Metrics
+	err = json.Unmarshal(body, &metrics)
+
+	if err != nil {
+		http.Error(w, "invalid json data", http.StatusBadRequest)
+		api.logger.Info("get invalid json data from client",
+			zap.String("data", string(body)),
+			zap.Error(err),
+		)
+		return
+	}
+	for _, metric := range metrics {
+		if metric.ID == "" {
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricName), http.StatusNotFound)
+			return
+		}
+		if metric.MType == "" {
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricType), http.StatusBadRequest)
+			return
+		}
+		if metric.Delta == nil && metric.Value == nil || metric.Delta != nil && metric.Value != nil {
+			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
+			return
+		}
+		appMetrics = append(appMetrics, metric)
+	}
+
+	errFromAppLayer := api.app.Updates(appMetrics)
+	err = handleApplayerUpdateError(errFromAppLayer, w)
+	if err != nil {
+		return
+	}
+	//responseBody, err := json.Marshal(metrics)
+	//if err != nil {
+	//	http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
+	//	return
+	//}
+	//fmt.Printf("updates() my answer on request with body %s\n is %s\n", string(body), string(responseBody))
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("{}"))
 }

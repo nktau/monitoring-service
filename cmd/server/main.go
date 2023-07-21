@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+
 	cfg := config.New()
 	logger := utils.InitLogger()
 	// create storage layer
