@@ -17,8 +17,6 @@ const handlePathUpdate = "update"
 const handlePathValue = "value"
 const handlePathUpdates = "updates"
 
-type Metrics applayer.Metrics
-
 type httpAPI struct {
 	app    applayer.App
 	router chi.Router
