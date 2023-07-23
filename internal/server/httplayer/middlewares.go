@@ -35,6 +35,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 
 func (api *httpAPI) withLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("withLogging")
 		start := time.Now()
 		responseData := &responseData{
 			status: 0,
@@ -61,11 +62,12 @@ func (api *httpAPI) hashing(next http.Handler) http.Handler {
 		fmt.Println("hashing")
 		headerHashValue := r.Header.Get("HashSHA256")
 		body, err := io.ReadAll(r.Body)
+		fmt.Println(string(body))
 		defer r.Body.Close()
 		if err != nil {
 			api.logger.Error("", zap.Error(err))
 		}
-		fmt.Println(body)
+		//fmt.Println(body)
 		// подписываем алгоритмом HMAC, используя SHA-256
 		h := hmac.New(sha256.New, []byte(api.hashKey))
 		h.Write(body)

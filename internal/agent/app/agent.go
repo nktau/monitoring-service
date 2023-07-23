@@ -3,6 +3,8 @@ package app
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
@@ -16,11 +18,13 @@ type memStorage struct {
 	Gauge   []map[string]float64
 	Counter int64
 	logger  *zap.Logger
+	hashKey string
 }
 
-func New(logger *zap.Logger) memStorage {
+func New(logger *zap.Logger, key string) memStorage {
 	return memStorage{
-		logger: logger,
+		logger:  logger,
+		hashKey: key,
 	}
 }
 
@@ -117,6 +121,7 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 		mem.logger.Error("can't create request body json", zap.Error(err))
 		return err
 	}
+
 	compressedRequestBody := mem.compress(requestBody)
 	req, err := http.NewRequest(http.MethodPost,
 		fmt.Sprintf("%s/updates/", serverURL),
@@ -126,6 +131,11 @@ func (mem *memStorage) makeAndDoRequest(metrics []Metrics, serverURL string) err
 			zap.Error(err),
 			zap.String("request body: ", string(requestBody)))
 		return err
+	}
+
+	if mem.hashKey != "" {
+		hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
+		req.Header.Set("HashSHA256", hashSHA256)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
@@ -185,4 +195,16 @@ func (mem *memStorage) compress(data []byte) *bytes.Buffer {
 		mem.logger.Error("can't close gzip writer", zap.Error(err))
 	}
 	return &b
+}
+
+func (mem *memStorage) getSHA256HashString(buffer *bytes.Buffer) string {
+	h := hmac.New(sha256.New, []byte(mem.hashKey))
+	_, err := h.Write(buffer.Bytes())
+	if err != nil {
+		mem.logger.Error("", zap.Error(err))
+	}
+	hashSHA256 := h.Sum(nil)
+	hashSHA256String := fmt.Sprintf("%x", hashSHA256)
+	return hashSHA256String
+	//fmt.Println("hashSHA256String:", hashSHA256String)
 }
