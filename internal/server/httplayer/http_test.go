@@ -225,7 +225,7 @@ func TestHashing(t *testing.T) {
 	httpAPI := New(appLayer, logger, "ChangeME")
 	//ts := httptest.NewServer(httpAPI.router)
 	//defer ts.Close()
-	requestBody := `{"id": "first", "type": "gauge", "value": 1.1}`
+	requestBody := `{"id":"first","type":"gauge","value":1.1}`
 	src := []byte(requestBody)
 	h := hmac.New(sha256.New, []byte("ChangeME"))
 	h.Write(src)
@@ -284,12 +284,12 @@ func TestHashing(t *testing.T) {
 			//	panic("error")
 			//}
 			//defer res.Body.Close()
-			//require.NoError(t, err)
-			//assert.Equal(t, res.StatusCode, test.want.code)
-			//resBody, err := io.ReadAll(res.Body)
-			//require.NoError(t, err)
-			//assert.Equal(t, string(resBody), test.want.response)
-			//assert.Equal(t, res.Header.Get("Content-Type"), test.want.contentType)
+			require.NoError(t, err)
+			assert.Equal(t, rec.Code, test.want.code)
+			resBody, err := io.ReadAll(rec.Body)
+			require.NoError(t, err)
+			assert.Equal(t, string(resBody), test.want.response)
+			//assert.Equal(t, rec. ("Content-Type"), test.want.contentType)
 		})
 	}
 }
