@@ -12,6 +12,7 @@ type Config struct {
 	FileStoragePath string
 	Restore         bool
 	DatabaseDSN     string
+	HashKey         string
 }
 
 func New() Config {
@@ -30,6 +31,8 @@ func (cfg *Config) parseFlags() {
 		"if false server will not restore data which it write before restart")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "",
 		"database dsn")
+	flag.StringVar(&cfg.HashKey, "k", "",
+		"HASHKey")
 	flag.Parse()
 }
 
@@ -55,5 +58,8 @@ func (cfg *Config) parseEnv() {
 	}
 	if value, ok := os.LookupEnv("DATABASE_DSN"); ok {
 		cfg.DatabaseDSN = value
+	}
+	if value, ok := os.LookupEnv("KEY"); ok {
+		cfg.HashKey = value
 	}
 }

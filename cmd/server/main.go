@@ -17,7 +17,7 @@ func main() {
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpAPI := httplayer.New(appLayer, logger)
+	httpAPI := httplayer.New(appLayer, logger, "ChangeME")
 	logger.Info("starting http server")
 	if err := httpAPI.Start(cfg.ListenAddress); err != nil {
 		panic(err)

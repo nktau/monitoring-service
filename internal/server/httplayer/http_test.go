@@ -1,6 +1,8 @@
 package httplayer
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"fmt"
 	"github.com/nktau/monitoring-service/internal/server/applayer"
 	"github.com/nktau/monitoring-service/internal/server/config"
@@ -11,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -24,7 +27,7 @@ func TestUpdate(t *testing.T) {
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpAPI := New(appLayer, logger)
+	httpAPI := New(appLayer, logger, "")
 	ts := httptest.NewServer(httpAPI.router)
 	defer ts.Close()
 
@@ -129,7 +132,7 @@ func TestValue(t *testing.T) {
 	// create app layer
 	appLayer := applayer.New(storeLayer)
 	// create http layer
-	httpAPI := New(appLayer, logger)
+	httpAPI := New(appLayer, logger, "")
 	ts := httptest.NewServer(httpAPI.router)
 	defer ts.Close()
 	testMetric := "testMetric"
@@ -209,6 +212,84 @@ func TestValue(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, string(resBody), test.want.response)
 			assert.Equal(t, res.Header.Get("Content-Type"), test.want.contentType)
+		})
+	}
+}
+
+func TestHashing(t *testing.T) {
+	// create storage layer
+	storeLayer := storagelayer.New(logger, cfg)
+	// create app layer
+	appLayer := applayer.New(storeLayer)
+	// create http layer
+	httpAPI := New(appLayer, logger, "ChangeME")
+	//ts := httptest.NewServer(httpAPI.router)
+	//defer ts.Close()
+	requestBody := `{"id": "first", "type": "gauge", "value": 1.1}`
+	src := []byte(requestBody)
+	h := hmac.New(sha256.New, []byte("ChangeME"))
+	h.Write(src)
+	expectedHash := h.Sum(nil)
+	//fmt.Println(string(dst))
+	expectedHashString := fmt.Sprintf("%x", expectedHash)
+	fmt.Println("expectedHashString: ", expectedHashString)
+	request, err := http.NewRequest(http.MethodPost, "/update/gauge/", strings.NewReader(requestBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	type want struct {
+		code        int
+		response    string
+		contentType string
+	}
+	tests := []struct {
+		name      string
+		body      string
+		signature string
+		want      want
+	}{
+		{
+			name:      "#1 positive test",
+			body:      requestBody,
+			signature: expectedHashString,
+			want: want{
+				code:        http.StatusOK,
+				response:    requestBody,
+				contentType: "application/json",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			// create the handler to test, using our custom "next" handler
+			handlerToTest := httpAPI.hashing(http.HandlerFunc(httpAPI.updateJSON))
+
+			// create a mock request to use
+			//req := httptest.NewRequest("GET", "http://testing", nil)
+
+			// call the handler using a mock response recorder (we'll not use that anyway)
+
+			runRequest := request
+			runRequest.Header.Set("HashSHA256", test.signature)
+			//fmt.Println("runRequest", runRequest.Header.Get("HashSHA256"))
+			//fmt.Println(io.ReadAll(runRequest.Body))
+			rec := httptest.NewRecorder()
+			handlerToTest.ServeHTTP(rec, runRequest)
+			fmt.Println(rec.Code, rec.Body)
+			//res, err := ts.Client().Do(runRequest)
+			//if err != nil {
+			//	fmt.Println(err)
+			//	fmt.Println("panic err ahaha")
+			//	panic("error")
+			//}
+			//defer res.Body.Close()
+			//require.NoError(t, err)
+			//assert.Equal(t, res.StatusCode, test.want.code)
+			//resBody, err := io.ReadAll(res.Body)
+			//require.NoError(t, err)
+			//assert.Equal(t, string(resBody), test.want.response)
+			//assert.Equal(t, res.Header.Get("Content-Type"), test.want.contentType)
 		})
 	}
 }

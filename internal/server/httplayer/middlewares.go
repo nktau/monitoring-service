@@ -1,7 +1,12 @@
 package httplayer
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"fmt"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"time"
 )
@@ -48,5 +53,36 @@ func (api *httpAPI) withLogging(next http.Handler) http.Handler {
 			zap.Int("status", responseData.status),
 			zap.Int("size", responseData.size),
 		)
+	})
+}
+
+func (api *httpAPI) hashing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("hashing")
+		headerHashValue := r.Header.Get("HashSHA256")
+		body, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			api.logger.Error("", zap.Error(err))
+		}
+		fmt.Println(body)
+		// подписываем алгоритмом HMAC, используя SHA-256
+		h := hmac.New(sha256.New, []byte(api.hashKey))
+		h.Write(body)
+		expectedHash := h.Sum(nil)
+
+		//fmt.Printf("%x", expectedHash)
+		expectedHashString := fmt.Sprintf("%x", expectedHash)
+		fmt.Println(expectedHashString)
+		fmt.Println(headerHashValue)
+		if expectedHashString == headerHashValue {
+			fmt.Println("hashing ServeHTTP")
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			fmt.Println(r.Body)
+			next.ServeHTTP(w, r)
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			//w.Write([]byte("Incorrect HashSHA256 header value"))
+		}
 	})
 }
