@@ -81,8 +81,9 @@ func (api *httpAPI) hashing(next http.Handler) http.Handler {
 			fmt.Println(r.Body)
 			next.ServeHTTP(w, r)
 		} else {
+			api.logger.Info("Client send incorrect HashSHA256 header value")
 			w.WriteHeader(http.StatusBadRequest)
-			//w.Write([]byte("Incorrect HashSHA256 header value"))
+			w.Write([]byte("Incorrect HashSHA256 header value"))
 		}
 	})
 }
