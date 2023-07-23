@@ -61,6 +61,11 @@ func (api *httpAPI) hashing(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("hashing")
 		headerHashValue := r.Header.Get("HashSHA256")
+		if headerHashValue == "" {
+			api.logger.Info("empty HashSHA256 header")
+			next.ServeHTTP(w, r)
+			return
+		}
 		body, err := io.ReadAll(r.Body)
 		fmt.Println(string(body))
 		defer r.Body.Close()
