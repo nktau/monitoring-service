@@ -21,13 +21,6 @@ var cfg config.Config
 
 func TestUpdate(t *testing.T) {
 	cfg = config.New()
-	storeLayer := storagelayer.New(logger, cfg)
-	// create app layer
-	appLayer := applayer.New(storeLayer)
-	// create http layer
-	httpAPI := New(appLayer, logger, "")
-	ts := httptest.NewServer(httpAPI.router)
-	defer ts.Close()
 
 	type want struct {
 		code        int
@@ -103,6 +96,14 @@ func TestUpdate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			storeLayer := storagelayer.New(logger, cfg)
+			// create app layer
+			appLayer := applayer.New(storeLayer)
+			// create http layer
+			httpAPI := New(appLayer, logger, "")
+			ts := httptest.NewServer(httpAPI.router)
+			defer ts.Close()
+
 			request, err := http.NewRequest(test.httpMethod, ts.URL+test.targetURL, nil)
 			if err != nil {
 				panic("err")
@@ -125,26 +126,9 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
-	// create storage layer
-	storeLayer := storagelayer.New(logger, cfg)
-	// create app layer
-	appLayer := applayer.New(storeLayer)
-	// create http layer
-	httpAPI := New(appLayer, logger, "")
-	ts := httptest.NewServer(httpAPI.router)
-	defer ts.Close()
+
 	testMetric := "testMetric"
 	testMetricValue := "123.5"
-	request, err := http.NewRequest(http.MethodPost, ts.URL+
-		fmt.Sprintf("/update/gauge/%s/%s", testMetric, testMetricValue), nil)
-	if err != nil {
-		panic("Can't post data to server for a test")
-	}
-	res, err := ts.Client().Do(request)
-	if err != nil {
-		panic("Can't post data to server for a test")
-	}
-	defer res.Body.Close()
 
 	type want struct {
 		code        int
@@ -190,11 +174,30 @@ func TestValue(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request, err := http.NewRequest(test.httpMethod, ts.URL+test.targetURL, nil)
+			// create storage layer
+			storeLayer := storagelayer.New(logger, cfg)
+			// create app layer
+			appLayer := applayer.New(storeLayer)
+			// create http layer
+			httpAPI := New(appLayer, logger, "")
+			ts := httptest.NewServer(httpAPI.router)
+			defer ts.Close()
+			request, err := http.NewRequest(http.MethodPost, ts.URL+
+				fmt.Sprintf("/update/gauge/%s/%s", testMetric, testMetricValue), nil)
+			if err != nil {
+				panic("Can't post data to server for a test")
+			}
+			res, err := ts.Client().Do(request)
+			if err != nil {
+				panic("Can't post data to server for a test")
+			}
+			defer res.Body.Close()
+
+			request, err = http.NewRequest(test.httpMethod, ts.URL+test.targetURL, nil)
 			if err != nil {
 				panic("err")
 			}
-			res, err := ts.Client().Do(request)
+			res, err = ts.Client().Do(request)
 			if err != nil {
 				fmt.Println(err)
 				panic("error")
