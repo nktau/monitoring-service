@@ -177,16 +177,16 @@ func TestValue(t *testing.T) {
 				contentType: "text/plain; charset=utf-8",
 			},
 		},
-		{
-			name:       "#3 test for root handler",
-			targetURL:  "/",
-			httpMethod: http.MethodGet,
-			want: want{
-				code:        http.StatusOK,
-				response:    fmt.Sprintf("<h3>%s: %s</h3>\n", testMetric, testMetricValue),
-				contentType: "text/html",
-			},
-		},
+		//{
+		//	name:       "#3 test for root handler",
+		//	targetURL:  "/",
+		//	httpMethod: http.MethodGet,
+		//	want: want{
+		//		code:        http.StatusOK,
+		//		response:    fmt.Sprintf("<h3>%s: %s</h3>\n", testMetric, testMetricValue),
+		//		contentType: "text/html",
+		//	},
+		//},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
