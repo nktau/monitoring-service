@@ -7,7 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	psLoad "github.com/shirou/gopsutil/v3/load"
+	psMem "github.com/shirou/gopsutil/v3/mem"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -31,28 +34,24 @@ func New(logger *zap.Logger, key string) memStorage {
 
 var wg sync.WaitGroup
 
-func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval int) {
-	//count := 0
-	//for {
-	//	if count%pollInterval == 0 {
-	//		mem.GetRuntimeMetrics(int64(reportInterval))
-	//	}
-	//	count++
-	//	if count%reportInterval == 0 {
-	//		mem.SendRuntimeMetric(serverURL)
-	//	}
-	//	time.Sleep(1 * time.Second)
-	//}
-
+func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval, rateLimit int) {
+	mem.GetGopsutilMetrics(int64(pollInterval))
 	wg.Add(2)
-	chMemStorage := mem.GetRuntimeMetrics(int64(pollInterval))
+	chRuntimeMetrics := mem.GetRuntimeMetrics(int64(pollInterval))
+	chGopsutilMetrics := mem.GetGopsutilMetrics(int64(pollInterval))
+	chMemStorage := mem.CombineGettingMetrics(chRuntimeMetrics, chGopsutilMetrics)
 	chMetrics := mem.CreateMetricsBuffer(chMemStorage, int64(reportInterval))
-	err := mem.makeAndDoRequest(chMetrics, serverURL)
-	if err != nil {
+	g := new(errgroup.Group)
+	for i := 0; i < rateLimit; i++ {
+		g.Go(func() error {
+			return mem.makeAndDoRequest(chMetrics, serverURL)
+		})
+		go mem.makeAndDoRequest(chMetrics, serverURL)
+	}
+	if err := g.Wait(); err != nil {
 		mem.logger.Error("", zap.Error(err))
 	}
 	wg.Wait()
-
 }
 
 type Metrics struct {
@@ -62,18 +61,32 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func (mem *memStorage) GetRuntimeMetrics(pollInterval int64) chan memStorage {
+func (mem *memStorage) CombineGettingMetrics(chRuntime, chGopsutil chan map[string]float64) chan memStorage {
 	chRes := make(chan memStorage)
 	go func() {
-		defer wg.Done()
-		//if mem.Counter%reportInterval == 0 {
-		//	mem.Gauge = []map[string]float64{}
-		//}
-		//mem.Gauge = append(mem.Gauge, tmpGaugeMap)
-		defer close(chRes)
-		var memCounter int64 = 0
+		var counter int64 = 0
 		for {
 			tmpMemStorage := memStorage{}
+			tmpGaugeMap := <-chRuntime
+			for key, value := range <-chGopsutil {
+				tmpGaugeMap[key] = value
+			}
+			tmpMemStorage.Gauge = tmpGaugeMap
+			tmpMemStorage.Counter = counter
+			chRes <- tmpMemStorage
+			counter++
+		}
+	}()
+
+	return chRes
+}
+
+func (mem *memStorage) GetRuntimeMetrics(pollInterval int64) chan map[string]float64 {
+	chRes := make(chan map[string]float64)
+	go func() {
+		defer wg.Done()
+		defer close(chRes)
+		for {
 			var rtm runtime.MemStats
 			runtime.ReadMemStats(&rtm)
 			tmpGaugeMap := map[string]float64{}
@@ -105,14 +118,35 @@ func (mem *memStorage) GetRuntimeMetrics(pollInterval int64) chan memStorage {
 			tmpGaugeMap["TotalAlloc"] = float64(rtm.TotalAlloc)
 			tmpGaugeMap["Lookups"] = float64(rtm.Lookups)
 			tmpGaugeMap["RandomValue"] = rand.Float64()
-			memCounter++
-			tmpMemStorage.Gauge = tmpGaugeMap
-			tmpMemStorage.Counter = memCounter
-			chRes <- tmpMemStorage
-
+			chRes <- tmpGaugeMap
 			time.Sleep(time.Duration(pollInterval) * time.Second)
 		}
 	}()
+	return chRes
+}
+
+func (mem *memStorage) GetGopsutilMetrics(pollInterval int64) chan map[string]float64 {
+	chRes := make(chan map[string]float64)
+	go func() {
+		defer close(chRes)
+		for {
+			memoryUsage, err := psMem.VirtualMemory()
+			if err != nil {
+				mem.logger.Error("", zap.Error(err))
+			}
+			tmpGaugeMap := map[string]float64{}
+			tmpGaugeMap["TotalMemory"] = float64(memoryUsage.Total)
+			tmpGaugeMap["FreeMemory"] = float64(memoryUsage.Free)
+			load, err := psLoad.Avg()
+			if err != nil {
+				mem.logger.Error("", zap.Error(err))
+			}
+			tmpGaugeMap["CPUutilization1"] = load.Load1
+			chRes <- tmpGaugeMap
+			time.Sleep(time.Duration(pollInterval) * time.Second)
+		}
+	}()
+
 	return chRes
 }
 

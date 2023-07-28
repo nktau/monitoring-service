@@ -12,6 +12,7 @@ type config struct {
 	ReportInterval int
 	PollInterval   int
 	HashKey        string
+	RateLimit      int
 }
 
 func New() config {
@@ -27,6 +28,7 @@ func (cfg *config) parseFlags() {
 	flag.IntVar(&cfg.ReportInterval, "r", 2, "frequency of sending metrics to the server in seconds")
 	flag.IntVar(&cfg.PollInterval, "p", 1, "frequency of polling metrics from the runtime package in seconds")
 	flag.StringVar(&cfg.HashKey, "k", "", "HASHKey")
+	flag.IntVar(&cfg.RateLimit, "l", 1, "RATE_LIMIT")
 	flag.Parse()
 }
 
@@ -48,5 +50,12 @@ func (cfg *config) parseEnv() {
 	}
 	if value, ok := os.LookupEnv("KEY"); ok {
 		cfg.HashKey = value
+	}
+	if value, ok := os.LookupEnv("RATE_LIMIT"); ok {
+		rateLimit, err := strconv.Atoi(value)
+		if err == nil {
+			cfg.RateLimit = rateLimit
+		}
+
 	}
 }
