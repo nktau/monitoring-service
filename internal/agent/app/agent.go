@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/nktau/monitoring-service/internal/agent/config"
 	psLoad "github.com/shirou/gopsutil/v3/load"
 	psMem "github.com/shirou/gopsutil/v3/mem"
 	"go.uber.org/zap"
@@ -22,31 +23,30 @@ type memStorage struct {
 	Gauge   map[string]float64
 	Counter int64
 	logger  *zap.Logger
-	hashKey string
+	config  config.Config
 }
 
-func New(logger *zap.Logger, key string) memStorage {
+func New(logger *zap.Logger, config config.Config) memStorage {
 	return memStorage{
-		logger:  logger,
-		hashKey: key,
+		logger: logger,
+		config: config,
 	}
 }
 
 var wg sync.WaitGroup
 
-func (mem *memStorage) Start(serverURL string, reportInterval, pollInterval, rateLimit int) {
-	mem.GetGopsutilMetrics(int64(pollInterval))
+func (mem *memStorage) Start() {
 	wg.Add(2)
-	chRuntimeMetrics := mem.GetRuntimeMetrics(int64(pollInterval))
-	chGopsutilMetrics := mem.GetGopsutilMetrics(int64(pollInterval))
+	chRuntimeMetrics := mem.GetRuntimeMetrics()
+	chGopsutilMetrics := mem.GetGopsutilMetrics()
 	chMemStorage := mem.CombineGettingMetrics(chRuntimeMetrics, chGopsutilMetrics)
-	chMetrics := mem.CreateMetricsBuffer(chMemStorage, int64(reportInterval))
+	chMetrics := mem.CreateMetricsBuffer(chMemStorage)
 	g := new(errgroup.Group)
-	for i := 0; i < rateLimit; i++ {
+	for i := 0; i < mem.config.RateLimit; i++ {
 		g.Go(func() error {
-			return mem.makeAndDoRequest(chMetrics, serverURL)
+			return mem.makeAndDoRequest(chMetrics)
 		})
-		go mem.makeAndDoRequest(chMetrics, serverURL)
+		go mem.makeAndDoRequest(chMetrics)
 	}
 	if err := g.Wait(); err != nil {
 		mem.logger.Error("", zap.Error(err))
@@ -81,7 +81,7 @@ func (mem *memStorage) CombineGettingMetrics(chRuntime, chGopsutil chan map[stri
 	return chRes
 }
 
-func (mem *memStorage) GetRuntimeMetrics(pollInterval int64) chan map[string]float64 {
+func (mem *memStorage) GetRuntimeMetrics() chan map[string]float64 {
 	chRes := make(chan map[string]float64)
 	go func() {
 		defer wg.Done()
@@ -119,13 +119,13 @@ func (mem *memStorage) GetRuntimeMetrics(pollInterval int64) chan map[string]flo
 			tmpGaugeMap["Lookups"] = float64(rtm.Lookups)
 			tmpGaugeMap["RandomValue"] = rand.Float64()
 			chRes <- tmpGaugeMap
-			time.Sleep(time.Duration(pollInterval) * time.Second)
+			time.Sleep(time.Duration(mem.config.PollInterval) * time.Second)
 		}
 	}()
 	return chRes
 }
 
-func (mem *memStorage) GetGopsutilMetrics(pollInterval int64) chan map[string]float64 {
+func (mem *memStorage) GetGopsutilMetrics() chan map[string]float64 {
 	chRes := make(chan map[string]float64)
 	go func() {
 		defer close(chRes)
@@ -143,14 +143,14 @@ func (mem *memStorage) GetGopsutilMetrics(pollInterval int64) chan map[string]fl
 			}
 			tmpGaugeMap["CPUutilization1"] = load.Load1
 			chRes <- tmpGaugeMap
-			time.Sleep(time.Duration(pollInterval) * time.Second)
+			time.Sleep(time.Duration(mem.config.PollInterval) * time.Second)
 		}
 	}()
 
 	return chRes
 }
 
-func (mem *memStorage) CreateMetricsBuffer(chIn chan memStorage, reportInterval int64) chan []Metrics {
+func (mem *memStorage) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 	chRes := make(chan []Metrics)
 	go func() {
 		defer wg.Done()
@@ -172,14 +172,13 @@ func (mem *memStorage) CreateMetricsBuffer(chIn chan memStorage, reportInterval 
 			}
 			metrics = append(metrics, metric)
 			chRes <- metrics
-			time.Sleep(time.Duration(reportInterval) * time.Second)
+			time.Sleep(time.Duration(mem.config.ReportInterval) * time.Second)
 		}
 	}()
-
 	return chRes
 }
 
-func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics, serverURL string) error {
+func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics) error {
 	for metrics := range chMetrics {
 		requestBody, err := json.Marshal(metrics)
 		if err != nil {
@@ -189,7 +188,7 @@ func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics, serverURL stri
 
 		compressedRequestBody := mem.compress(requestBody)
 		req, err := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("%s/updates/", serverURL),
+			fmt.Sprintf("%s/updates/", mem.config.ServerURL),
 			compressedRequestBody)
 		if err != nil {
 			mem.logger.Error("can't create request",
@@ -198,7 +197,7 @@ func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics, serverURL stri
 			return err
 		}
 
-		if mem.hashKey != "" {
+		if mem.config.HashKey != "" {
 			hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
 			req.Header.Set("HashSHA256", hashSHA256)
 		}
@@ -264,7 +263,7 @@ func (mem *memStorage) compress(data []byte) *bytes.Buffer {
 }
 
 func (mem *memStorage) getSHA256HashString(buffer *bytes.Buffer) string {
-	h := hmac.New(sha256.New, []byte(mem.hashKey))
+	h := hmac.New(sha256.New, []byte(mem.config.HashKey))
 	_, err := h.Write(buffer.Bytes())
 	if err != nil {
 		mem.logger.Error("", zap.Error(err))
@@ -272,5 +271,4 @@ func (mem *memStorage) getSHA256HashString(buffer *bytes.Buffer) string {
 	hashSHA256 := h.Sum(nil)
 	hashSHA256String := fmt.Sprintf("%x", hashSHA256)
 	return hashSHA256String
-	//fmt.Println("hashSHA256String:", hashSHA256String)
 }
