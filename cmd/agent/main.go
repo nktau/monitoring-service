@@ -8,6 +8,6 @@ import (
 
 func main() {
 	cfg := config.New()
-	agent := app.New(utils.InitLogger(), cfg)
+	agent := app.New(utils.InitLogger(), app.MemStorageConfig(cfg))
 	agent.Start()
 }

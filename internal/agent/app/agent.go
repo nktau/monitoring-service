@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/nktau/monitoring-service/internal/agent/config"
 	psLoad "github.com/shirou/gopsutil/v3/load"
 	psMem "github.com/shirou/gopsutil/v3/mem"
 	"go.uber.org/zap"
@@ -23,13 +22,21 @@ type memStorage struct {
 	Gauge   map[string]float64
 	Counter int64
 	logger  *zap.Logger
-	config  config.Config
+	config  MemStorageConfig
 }
 
-func New(logger *zap.Logger, config config.Config) memStorage {
+type MemStorageConfig struct {
+	ServerURL      string
+	ReportInterval int
+	PollInterval   int
+	HashKey        string
+	RateLimit      int
+}
+
+func New(logger *zap.Logger, memStorageConfig MemStorageConfig) memStorage {
 	return memStorage{
 		logger: logger,
-		config: config,
+		config: memStorageConfig,
 	}
 }
 

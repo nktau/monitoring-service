@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-type Config struct {
+type config struct {
 	ServerURL      string
 	ReportInterval int
 	PollInterval   int
@@ -15,15 +15,15 @@ type Config struct {
 	RateLimit      int
 }
 
-func New() Config {
-	cfg := Config{}
+func New() config {
+	cfg := config{}
 	cfg.parseFlags()
 	cfg.parseEnv()
 	cfg.ServerURL = fmt.Sprintf("http://%s", cfg.ServerURL)
 	return cfg
 }
 
-func (cfg *Config) parseFlags() {
+func (cfg *config) parseFlags() {
 	flag.StringVar(&cfg.ServerURL, "a", "localhost:8080", "endpoint of monitoring-service server")
 	flag.IntVar(&cfg.ReportInterval, "r", 2, "frequency of sending metrics to the server in seconds")
 	flag.IntVar(&cfg.PollInterval, "p", 1, "frequency of polling metrics from the runtime package in seconds")
@@ -32,7 +32,7 @@ func (cfg *Config) parseFlags() {
 	flag.Parse()
 }
 
-func (cfg *Config) parseEnv() {
+func (cfg *config) parseEnv() {
 	if envServerURL := os.Getenv("ADDRESS"); envServerURL != "" {
 		cfg.ServerURL = envServerURL
 	}
