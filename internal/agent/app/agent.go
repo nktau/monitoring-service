@@ -53,7 +53,6 @@ func (mem *memStorage) Start() {
 		g.Go(func() error {
 			return mem.makeAndDoRequest(chMetrics)
 		})
-		go mem.makeAndDoRequest(chMetrics)
 	}
 	if err := g.Wait(); err != nil {
 		mem.logger.Error("", zap.Error(err))
