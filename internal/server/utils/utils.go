@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/rand"
 	"fmt"
 	"go.uber.org/zap"
 	"io"
@@ -41,4 +42,14 @@ func GetLastLineWithSeek(filepath string) string {
 		}
 	}
 	return line
+}
+
+func GenerateRandom(size int) ([]byte, error) {
+	b := make([]byte, size)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }

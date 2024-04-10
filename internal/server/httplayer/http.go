@@ -18,20 +18,24 @@ const handlePathValue = "value"
 const handlePathUpdates = "updates"
 
 type httpAPI struct {
-	app    applayer.App
-	router chi.Router
-	logger *zap.Logger
+	app     applayer.App
+	router  chi.Router
+	logger  *zap.Logger
+	hashKey string
 }
 
-func New(appLayer applayer.App, logger *zap.Logger) httpAPI {
-
+func New(appLayer applayer.App, logger *zap.Logger, hashKey string) httpAPI {
 	api := httpAPI{
-		app:    appLayer,
-		router: chi.NewRouter(),
-		logger: logger,
+		app:     appLayer,
+		router:  chi.NewRouter(),
+		logger:  logger,
+		hashKey: hashKey,
 	}
 	api.router.Use(api.withLogging)
 	api.router.Use(middleware.Compress(5, "application/json", "text/html"))
+	if hashKey != "" {
+		api.router.Use(api.hashing)
+	}
 	api.router.Post(fmt.Sprintf("/%s/*", handlePathUpdate), api.whichOfUpdateHandlerUse)
 	api.router.Get(fmt.Sprintf("/%s/*", handlePathValue), api.valuePlainText)
 	api.router.Post(fmt.Sprintf("/%s/*", handlePathUpdates), api.updates)
