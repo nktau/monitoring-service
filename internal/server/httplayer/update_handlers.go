@@ -26,6 +26,7 @@ func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var metric utils.Metrics
+	api.logger.Info("body", zap.String("", string(body)))
 	err = json.Unmarshal(body, &metric)
 	if err != nil {
 		http.Error(w, "invalid json data", http.StatusBadRequest)
@@ -45,15 +46,15 @@ func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricType), http.StatusBadRequest)
 		return
 	}
-	if metric.Delta == nil && metric.Value == nil || metric.Delta != nil && metric.Value != nil {
+	if metric.Delta == 0 && metric.Value == 0 || metric.Delta != 0 && metric.Value != 0 {
 		http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
 		return
 	}
 	var errFromAppLayer error
-	if metric.Delta != nil && metric.Value == nil {
-		errFromAppLayer = api.app.Update(metric.MType, metric.ID, fmt.Sprintf("%d", *metric.Delta))
-	} else if metric.Delta == nil && metric.Value != nil {
-		errFromAppLayer = api.app.Update(metric.MType, metric.ID, utils.MetricValueWithoutTrailingZero(*metric.Value))
+	if metric.Delta != 0 && metric.Value == 0 {
+		errFromAppLayer = api.app.Update(metric.MType, metric.ID, fmt.Sprintf("%d", metric.Delta))
+	} else if metric.Delta == 0 && metric.Delta != 0 {
+		errFromAppLayer = api.app.Update(metric.MType, metric.ID, utils.MetricValueWithoutTrailingZero(metric.Value))
 	}
 
 	err = handleApplayerUpdateError(errFromAppLayer, w)
@@ -168,10 +169,10 @@ func (api *httpAPI) updates(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricType), http.StatusBadRequest)
 			return
 		}
-		if metric.Delta == nil && metric.Value == nil || metric.Delta != nil && metric.Value != nil {
-			http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
-			return
-		}
+		//if metric.Delta == 0 && metric.Value == 0 || metric.Delta != 0 && metric.Delta != 0 {
+		//	http.Error(w, fmt.Sprintf("%v", applayer.ErrWrongMetricValue), http.StatusBadRequest)
+		//	return
+		//}
 		appMetrics = append(appMetrics, metric)
 	}
 
