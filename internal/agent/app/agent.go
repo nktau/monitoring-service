@@ -245,7 +245,6 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 					}
 				}
 			}
-			return err
 		}
 		err = req.Body.Close()
 		if err != nil {
