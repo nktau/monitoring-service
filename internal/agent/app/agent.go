@@ -216,27 +216,26 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 		req.Header.Set("Content-Encoding", "gzip")
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			headers := ""
-			for header, _ := range req.Header {
-				headers += fmt.Sprintf("%s: %s, ", header, req.Header.Get(header))
-			}
 			mem.logger.Error("can't send metric to the server",
 				zap.Error(err),
-				zap.String("request body: ", string(requestBody)),
-				zap.String("request body: ", string(requestBody)),
-				zap.String("request headers", headers),
 			)
+		} else {
+			err = res.Body.Close()
+			if err != nil {
+				mem.logger.Error("can't close res body", zap.Error(err))
+				return err
+			}
 		}
-		err = req.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close req body", zap.Error(err))
-			return err
-		}
-		err = res.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close res body", zap.Error(err))
-			return err
-		}
+		//err = req.Body.Close()
+		//if err != nil {
+		//	mem.logger.Error("can't close req body", zap.Error(err))
+		//	return err
+		//}
+		//err = res.Body.Close()
+		//if err != nil {
+		//	mem.logger.Error("can't close res body", zap.Error(err))
+		//	return err
+		//}
 
 	}
 	return nil
