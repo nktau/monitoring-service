@@ -195,9 +195,8 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 			mem.logger.Error("can't create request body json", zap.Error(err))
 			return err
 		}
-		compressedRequestBody := mem.compress(requestBody)
-
 		for i := 0; i < 11; i++ {
+			compressedRequestBody := mem.compress(requestBody)
 			req, err := http.NewRequest(http.MethodPost,
 				fmt.Sprintf("%s/updates/", mem.config.ServerURL),
 				compressedRequestBody)
