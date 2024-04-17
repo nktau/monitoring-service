@@ -198,15 +198,6 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 		compressedRequestBody := mem.compress(requestBody)
 
 		for i := 0; i < 11; i++ {
-			if i != 0 && i != 1 && i != 4 && i != 9 && i != 10 {
-				time.Sleep(time.Second)
-				continue
-			}
-			if i == 10 {
-				fmt.Println("testI")
-				return err
-			}
-
 			req, err := http.NewRequest(http.MethodPost,
 				fmt.Sprintf("%s/updates/", mem.config.ServerURL),
 				compressedRequestBody)
@@ -248,6 +239,7 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 				}
 				break
 			}
+			time.Sleep(time.Second)
 
 		}
 	}
