@@ -189,6 +189,7 @@ func (mem *agent) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 }
 
 func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
+	time.Sleep(2 * time.Second)
 	for metrics := range chMetrics {
 		requestBody, err := json.Marshal(metrics)
 		if err != nil {
