@@ -189,59 +189,55 @@ func (mem *agent) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 }
 
 func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 	for metrics := range chMetrics {
 		requestBody, err := json.Marshal(metrics)
 		if err != nil {
 			mem.logger.Error("can't create request body json", zap.Error(err))
 			return err
 		}
-		for i := 0; i < 11; i++ {
-			compressedRequestBody := mem.compress(requestBody)
-			req, err := http.NewRequest(http.MethodPost,
-				fmt.Sprintf("%s/updates/", mem.config.ServerURL),
-				compressedRequestBody)
-			if err != nil {
-				mem.logger.Error("can't create request",
-					zap.Error(err),
-					zap.String("request body: ", string(requestBody)))
-				return err
-			}
 
-			if mem.config.HashKey != "" {
-				hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
-				req.Header.Set("HashSHA256", hashSHA256)
-			}
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Content-Encoding", "gzip")
-			res, err := http.DefaultClient.Do(req)
-			if err != nil {
-				headers := ""
-				for header, _ := range req.Header {
-					headers += fmt.Sprintf("%s: %s, ", header, req.Header.Get(header))
-				}
-				mem.logger.Error("can't send metric to the server",
-					zap.Error(err),
-					zap.String("request body: ", string(requestBody)),
-					zap.String("request body: ", string(requestBody)),
-					zap.String("request headers", headers),
-				)
-			} else {
-				err = req.Body.Close()
-				if err != nil {
-					mem.logger.Error("can't close req body", zap.Error(err))
-					return err
-				}
-				err = res.Body.Close()
-				if err != nil {
-					mem.logger.Error("can't close res body", zap.Error(err))
-					return err
-				}
-				break
-			}
-			time.Sleep(time.Second)
-
+		compressedRequestBody := mem.compress(requestBody)
+		req, err := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("%s/updates/", mem.config.ServerURL),
+			compressedRequestBody)
+		if err != nil {
+			mem.logger.Error("can't create request",
+				zap.Error(err),
+				zap.String("request body: ", string(requestBody)))
+			return err
 		}
+
+		if mem.config.HashKey != "" {
+			hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
+			req.Header.Set("HashSHA256", hashSHA256)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Encoding", "gzip")
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			headers := ""
+			for header, _ := range req.Header {
+				headers += fmt.Sprintf("%s: %s, ", header, req.Header.Get(header))
+			}
+			mem.logger.Error("can't send metric to the server",
+				zap.Error(err),
+				zap.String("request body: ", string(requestBody)),
+				zap.String("request body: ", string(requestBody)),
+				zap.String("request headers", headers),
+			)
+		}
+		err = req.Body.Close()
+		if err != nil {
+			mem.logger.Error("can't close req body", zap.Error(err))
+			return err
+		}
+		err = res.Body.Close()
+		if err != nil {
+			mem.logger.Error("can't close res body", zap.Error(err))
+			return err
+		}
+
 	}
 	return nil
 }
