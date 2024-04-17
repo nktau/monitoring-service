@@ -196,79 +196,59 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 			return err
 		}
 		compressedRequestBody := mem.compress(requestBody)
-		req, err := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("%s/updates/", mem.config.ServerURL),
-			compressedRequestBody)
-		if err != nil {
-			mem.logger.Error("can't create request",
-				zap.Error(err),
-				zap.String("request body: ", string(requestBody)))
-			return err
-		}
 
-		if mem.config.HashKey != "" {
-			hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
-			req.Header.Set("HashSHA256", hashSHA256)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Encoding", "gzip")
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			headers := ""
-			for header, _ := range req.Header {
-				headers += fmt.Sprintf("%s: %s, ", header, req.Header.Get(header))
-			}
-			mem.logger.Error("can't send metric to the server",
-				zap.Error(err),
-				zap.String("request body: ", string(requestBody)),
-				zap.String("request headers", headers),
-			)
-
-			count := 0
-			for {
+		for i := 0; i < 11; i++ {
+			if i != 0 && i != 1 && i != 4 && i != 9 && i != 10 {
 				time.Sleep(time.Second)
-				count++
-				if count == 1 || count == 4 || count == 9 {
-					res, err = http.DefaultClient.Do(req)
-					if err != nil {
-						headers = ""
-						for header, _ := range req.Header {
-							headers += fmt.Sprintf("%s: %s, ", header, req.Header.Get(header))
-						}
-						mem.logger.Error("can't send metric to the server",
-							zap.Error(err),
-							zap.String("request body: ", string(requestBody)),
-							zap.String("request headers", headers),
-						)
-
-						if count == 9 {
-							break
-						}
-					} else {
-						err = req.Body.Close()
-						if err != nil {
-							mem.logger.Error("can't close req body", zap.Error(err))
-							return err
-						}
-						err = res.Body.Close()
-						if err != nil {
-							mem.logger.Error("can't close res body", zap.Error(err))
-							return err
-						}
-						break
-					}
-				}
+				continue
 			}
-		}
-		err = req.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close req body", zap.Error(err))
-			return err
-		}
-		err = res.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close res body", zap.Error(err))
-			return err
+			if i == 10 {
+				fmt.Println("testI")
+				return err
+			}
+
+			req, err := http.NewRequest(http.MethodPost,
+				fmt.Sprintf("%s/updates/", mem.config.ServerURL),
+				compressedRequestBody)
+			if err != nil {
+				mem.logger.Error("can't create request",
+					zap.Error(err),
+					zap.String("request body: ", string(requestBody)))
+				return err
+			}
+
+			if mem.config.HashKey != "" {
+				hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
+				req.Header.Set("HashSHA256", hashSHA256)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Content-Encoding", "gzip")
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				headers := ""
+				for header, _ := range req.Header {
+					headers += fmt.Sprintf("%s: %s, ", header, req.Header.Get(header))
+				}
+				mem.logger.Error("can't send metric to the server",
+					zap.Error(err),
+					zap.String("request body: ", string(requestBody)),
+					zap.String("request body: ", string(requestBody)),
+					zap.String("request headers", headers),
+				)
+			} else {
+				err = req.Body.Close()
+				if err != nil {
+					mem.logger.Error("can't close req body", zap.Error(err))
+					return err
+				}
+				err = res.Body.Close()
+				if err != nil {
+					mem.logger.Error("can't close res body", zap.Error(err))
+					return err
+				}
+				break
+			}
+
 		}
 	}
 	return nil
