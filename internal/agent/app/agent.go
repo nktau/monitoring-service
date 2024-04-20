@@ -209,47 +209,22 @@ func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics) error {
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
-
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			mem.logger.Error("can't send metric to the server",
 				zap.Error(err),
-				zap.String("request body: ", string(requestBody)))
-			count := 0
-			for {
-				time.Sleep(time.Second)
-				count++
-				if count == 1 || count == 4 || count == 9 {
-					res, err = http.DefaultClient.Do(req)
-					if err != nil {
-						if count == 9 {
-							break
-						}
-					} else {
-						err = req.Body.Close()
-						if err != nil {
-							mem.logger.Error("can't close req body", zap.Error(err))
-							return err
-						}
-						err = res.Body.Close()
-						if err != nil {
-							mem.logger.Error("can't close res body", zap.Error(err))
-							return err
-						}
-						break
-					}
-				}
+			)
+		} else {
+			err = res.Body.Close()
+			if err != nil {
+				mem.logger.Error("can't close res body", zap.Error(err))
+				return err
 			}
-			return err
 		}
+
 		err = req.Body.Close()
 		if err != nil {
 			mem.logger.Error("can't close req body", zap.Error(err))
-			return err
-		}
-		err = res.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close res body", zap.Error(err))
 			return err
 		}
 	}
