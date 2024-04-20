@@ -189,7 +189,24 @@ func (mem *agent) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 }
 
 func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
+	req, err := http.NewRequest(http.MethodGet,
+		fmt.Sprintf("%s/", mem.config.ServerURL),
+		nil)
+
+	if err != nil {
+		mem.logger.Error("can't create request", zap.Error(err))
+		return err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		mem.logger.Error("can't send metric to the server", zap.Error(err))
+	} else {
+		mem.logger.Debug("send metric to the server success!!!!!", zap.String("status", res.Status))
+
+	}
+
 	for metrics := range chMetrics {
 		requestBody, err := json.Marshal(metrics)
 		if err != nil {
