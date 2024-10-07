@@ -259,6 +259,7 @@ func (mem *agent) getSHA256HashString(buffer *bytes.Buffer) string {
 	return hashSHA256String
 }
 
+//
 //resBody, err := io.ReadAll(res.Body)
 //mem.logger.Debug("send metrics to the server",
 //	zap.String("URL", req.URL.String()),
