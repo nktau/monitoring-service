@@ -47,7 +47,7 @@ func New(logger *zap.Logger, memStorageConfig MemStorageConfig) agent {
 var wg sync.WaitGroup
 
 func (mem *agent) Start() {
-
+	time.Sleep(1 * time.Second)
 	wg.Add(2)
 	chRuntimeMetrics := mem.GetRuntimeMetrics()
 	chGopsutilMetrics := mem.GetGopsutilMetrics()
