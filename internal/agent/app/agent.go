@@ -47,7 +47,7 @@ func New(logger *zap.Logger, memStorageConfig MemStorageConfig) agent {
 var wg sync.WaitGroup
 
 func (mem *agent) Start() {
-
+	time.Sleep(1 * time.Second)
 	wg.Add(2)
 	chRuntimeMetrics := mem.GetRuntimeMetrics()
 	chGopsutilMetrics := mem.GetGopsutilMetrics()
@@ -259,6 +259,7 @@ func (mem *agent) getSHA256HashString(buffer *bytes.Buffer) string {
 	return hashSHA256String
 }
 
+//
 //resBody, err := io.ReadAll(res.Body)
 //mem.logger.Debug("send metrics to the server",
 //	zap.String("URL", req.URL.String()),
