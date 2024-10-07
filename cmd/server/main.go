@@ -6,6 +6,7 @@ import (
 	"github.com/nktau/monitoring-service/internal/server/httplayer"
 	"github.com/nktau/monitoring-service/internal/server/storagelayer"
 	"github.com/nktau/monitoring-service/internal/server/utils"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	appLayer := applayer.New(storeLayer)
 	// create http layer
 	httpAPI := httplayer.New(appLayer, logger, cfg.HashKey)
-	logger.Info("starting http server")
+	logger.Info("starting http server", zap.String("listenAddress", cfg.ListenAddress))
 	if err := httpAPI.Start(cfg.ListenAddress); err != nil {
 		panic(err)
 	}

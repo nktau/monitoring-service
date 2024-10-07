@@ -47,6 +47,7 @@ func New(logger *zap.Logger, memStorageConfig MemStorageConfig) agent {
 var wg sync.WaitGroup
 
 func (mem *agent) Start() {
+
 	wg.Add(2)
 	chRuntimeMetrics := mem.GetRuntimeMetrics()
 	chGopsutilMetrics := mem.GetGopsutilMetrics()
@@ -195,6 +196,7 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 			mem.logger.Error("can't create request body json", zap.Error(err))
 			return err
 		}
+
 		compressedRequestBody := mem.compress(requestBody)
 		req, err := http.NewRequest(http.MethodPost,
 			fmt.Sprintf("%s/updates/", mem.config.ServerURL),
@@ -213,13 +215,6 @@ func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
 		res, err := http.DefaultClient.Do(req)
-		//resBody, err := io.ReadAll(res.Body)
-		//mem.logger.Debug("send metrics to the server",
-		//	zap.String("URL", req.URL.String()),
-		//	zap.String("status code", res.Status),
-		//	zap.String("Method", req.Method),
-		//	zap.String("response body", string(resBody)),
-		//)
 		if err != nil {
 			mem.logger.Error("can't send metric to the server",
 				zap.Error(err),
@@ -263,3 +258,11 @@ func (mem *agent) getSHA256HashString(buffer *bytes.Buffer) string {
 	hashSHA256String := fmt.Sprintf("%x", hashSHA256)
 	return hashSHA256String
 }
+
+//resBody, err := io.ReadAll(res.Body)
+//mem.logger.Debug("send metrics to the server",
+//	zap.String("URL", req.URL.String()),
+//	zap.String("status code", res.Status),
+//	zap.String("Method", req.Method),
+//	zap.String("response body", string(resBody)),
+//)
