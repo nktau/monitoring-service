@@ -21,8 +21,12 @@ import (
 type memStorage struct {
 	Gauge   map[string]float64
 	Counter int64
-	logger  *zap.Logger
-	config  MemStorageConfig
+}
+
+type agent struct {
+	data   memStorage
+	logger *zap.Logger
+	config MemStorageConfig
 }
 
 type MemStorageConfig struct {
@@ -33,8 +37,8 @@ type MemStorageConfig struct {
 	RateLimit      int
 }
 
-func New(logger *zap.Logger, memStorageConfig MemStorageConfig) memStorage {
-	return memStorage{
+func New(logger *zap.Logger, memStorageConfig MemStorageConfig) agent {
+	return agent{
 		logger: logger,
 		config: memStorageConfig,
 	}
@@ -42,7 +46,7 @@ func New(logger *zap.Logger, memStorageConfig MemStorageConfig) memStorage {
 
 var wg sync.WaitGroup
 
-func (mem *memStorage) Start() {
+func (mem *agent) Start() {
 	wg.Add(2)
 	chRuntimeMetrics := mem.GetRuntimeMetrics()
 	chGopsutilMetrics := mem.GetGopsutilMetrics()
@@ -61,13 +65,13 @@ func (mem *memStorage) Start() {
 }
 
 type Metrics struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	ID    string  `json:"id"`              // имя метрики
+	MType string  `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
-func (mem *memStorage) CombineGettingMetrics(chRuntime, chGopsutil chan map[string]float64) chan memStorage {
+func (mem *agent) CombineGettingMetrics(chRuntime, chGopsutil chan map[string]float64) chan memStorage {
 	chRes := make(chan memStorage)
 	go func() {
 		var counter int64 = 0
@@ -87,7 +91,7 @@ func (mem *memStorage) CombineGettingMetrics(chRuntime, chGopsutil chan map[stri
 	return chRes
 }
 
-func (mem *memStorage) GetRuntimeMetrics() chan map[string]float64 {
+func (mem *agent) GetRuntimeMetrics() chan map[string]float64 {
 	chRes := make(chan map[string]float64)
 	go func() {
 		defer wg.Done()
@@ -131,7 +135,7 @@ func (mem *memStorage) GetRuntimeMetrics() chan map[string]float64 {
 	return chRes
 }
 
-func (mem *memStorage) GetGopsutilMetrics() chan map[string]float64 {
+func (mem *agent) GetGopsutilMetrics() chan map[string]float64 {
 	chRes := make(chan map[string]float64)
 	go func() {
 		defer close(chRes)
@@ -156,7 +160,7 @@ func (mem *memStorage) GetGopsutilMetrics() chan map[string]float64 {
 	return chRes
 }
 
-func (mem *memStorage) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
+func (mem *agent) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 	chRes := make(chan []Metrics)
 	go func() {
 		defer wg.Done()
@@ -167,14 +171,14 @@ func (mem *memStorage) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics 
 				metric := Metrics{
 					ID:    metricName,
 					MType: "gauge",
-					Value: &metricValue,
+					Value: metricValue,
 				}
 				metrics = append(metrics, metric)
 			}
 			metric := Metrics{
 				ID:    "PollCount",
 				MType: "counter",
-				Delta: &memStorageIter.Counter,
+				Delta: memStorageIter.Counter,
 			}
 			metrics = append(metrics, metric)
 			chRes <- metrics
@@ -184,14 +188,13 @@ func (mem *memStorage) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics 
 	return chRes
 }
 
-func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics) error {
+func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 	for metrics := range chMetrics {
 		requestBody, err := json.Marshal(metrics)
 		if err != nil {
 			mem.logger.Error("can't create request body json", zap.Error(err))
 			return err
 		}
-
 		compressedRequestBody := mem.compress(requestBody)
 		req, err := http.NewRequest(http.MethodPost,
 			fmt.Sprintf("%s/updates/", mem.config.ServerURL),
@@ -210,6 +213,13 @@ func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics) error {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
 		res, err := http.DefaultClient.Do(req)
+		//resBody, err := io.ReadAll(res.Body)
+		//mem.logger.Debug("send metrics to the server",
+		//	zap.String("URL", req.URL.String()),
+		//	zap.String("status code", res.Status),
+		//	zap.String("Method", req.Method),
+		//	zap.String("response body", string(resBody)),
+		//)
 		if err != nil {
 			mem.logger.Error("can't send metric to the server",
 				zap.Error(err),
@@ -231,7 +241,7 @@ func (mem *memStorage) makeAndDoRequest(chMetrics chan []Metrics) error {
 	return nil
 }
 
-func (mem *memStorage) compress(data []byte) *bytes.Buffer {
+func (mem *agent) compress(data []byte) *bytes.Buffer {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
 	if _, err := gz.Write(data); err != nil {
@@ -243,7 +253,7 @@ func (mem *memStorage) compress(data []byte) *bytes.Buffer {
 	return &b
 }
 
-func (mem *memStorage) getSHA256HashString(buffer *bytes.Buffer) string {
+func (mem *agent) getSHA256HashString(buffer *bytes.Buffer) string {
 	h := hmac.New(sha256.New, []byte(mem.config.HashKey))
 	_, err := h.Write(buffer.Bytes())
 	if err != nil {

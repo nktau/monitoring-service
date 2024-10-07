@@ -141,10 +141,10 @@ func (mem *memStorage) Updates(metrics []utils.Metrics) (err error) {
 	}()
 	for _, metric := range metrics {
 		if metric.MType == "gauge" {
-			mem.Gauge[metric.ID] = *metric.Value
+			mem.Gauge[metric.ID] = metric.Value
 		}
 		if metric.MType == "counter" {
-			mem.Counter[metric.ID] += *metric.Delta
+			mem.Counter[metric.ID] += metric.Delta
 		}
 	}
 	if mem.config.StoreInterval == 0 && mem.config.DatabaseDSN != "" {
@@ -456,9 +456,9 @@ func (mem *memStorage) updatesWriteToDB(metrics []utils.Metrics) error {
 	insertQuery := `insert into metrics ("name", "type", "value", "time_unix") values ($1, $2, $3, $4);`
 	for _, metric := range metrics {
 		if metric.MType == "gauge" {
-			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
+			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, metric.Value, timeQuery)
 			if err != nil {
-				errAfterRetry := mem.retryExecContext(err, tx.ExecContext, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
+				errAfterRetry := mem.retryExecContext(err, tx.ExecContext, insertQuery, metric.ID, metric.MType, metric.Value, timeQuery)
 				if errAfterRetry != nil {
 					mem.logger.Fatal("", zap.Error(errAfterRetry))
 					tx.Rollback()
@@ -467,9 +467,9 @@ func (mem *memStorage) updatesWriteToDB(metrics []utils.Metrics) error {
 			}
 		}
 		if metric.MType == "counter" {
-			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, *metric.Delta, timeQuery)
+			_, err := tx.ExecContext(ctx, insertQuery, metric.ID, metric.MType, metric.Delta, timeQuery)
 			if err != nil {
-				errAfterRetry := mem.retryExecContext(err, tx.ExecContext, insertQuery, metric.ID, metric.MType, *metric.Value, timeQuery)
+				errAfterRetry := mem.retryExecContext(err, tx.ExecContext, insertQuery, metric.ID, metric.MType, metric.Value, timeQuery)
 				if errAfterRetry != nil {
 					mem.logger.Fatal("", zap.Error(errAfterRetry))
 					tx.Rollback()

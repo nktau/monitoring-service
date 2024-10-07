@@ -58,13 +58,13 @@ func (api *httpAPI) valueJSON(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			api.logger.Error("can't convert from string to float64", zap.Error(err))
 		}
-		metric.Value = &floatValue
+		metric.Value = floatValue
 	} else {
 		intValue, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			api.logger.Error("can't convert from string to float64", zap.Error(err))
 		}
-		metric.Delta = &intValue
+		metric.Delta = intValue
 	}
 	responseBody, err := json.Marshal(metric)
 	if err != nil {
