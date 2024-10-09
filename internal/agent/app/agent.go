@@ -181,7 +181,7 @@ func (mem *agent) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 			}
 			metrics = append(metrics, metric)
 			chRes <- metrics
-			time.Sleep(time.Duration(mem.config.ReportInterval) * time.Second)
+			time.Sleep(time.Duration(mem.config.ReportInterval) * time.Millisecond)
 		}
 	}()
 	return chRes
