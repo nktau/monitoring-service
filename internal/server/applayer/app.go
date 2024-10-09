@@ -68,7 +68,9 @@ func (app *app) Update(metricType, metricName, metricValue string) error {
 	if err != nil {
 		return err
 	}
+
 	if metricType == "gauge" {
+		fmt.Println("App Update, gauge")
 		value, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			return ErrWrongMetricValue

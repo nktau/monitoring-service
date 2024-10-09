@@ -11,6 +11,8 @@ import (
 )
 
 func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("updateJSON")
+
 	w.Header().Set("Content-Type", "application/json")
 	reader, err := api.readBody(r)
 	if err != nil {
@@ -53,7 +55,7 @@ func (api *httpAPI) updateJSON(w http.ResponseWriter, r *http.Request) {
 	var errFromAppLayer error
 	if metric.Delta != 0 && metric.Value == 0 {
 		errFromAppLayer = api.app.Update(metric.MType, metric.ID, fmt.Sprintf("%d", metric.Delta))
-	} else if metric.Delta == 0 && metric.Delta != 0 {
+	} else if metric.Value != 0 {
 		errFromAppLayer = api.app.Update(metric.MType, metric.ID, utils.MetricValueWithoutTrailingZero(metric.Value))
 	}
 

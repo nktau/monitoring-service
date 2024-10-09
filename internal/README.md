@@ -16,3 +16,8 @@ curl -X POST http://localhost:8080/updates/ -H "Content-Type:application/json" -
 cd agent/ && go build . && cd -
 ```
 
+```
+ curl -X POST http://localhost:8080/value/ -H "Content-Type:application/json" -d "{\"id\":\"test_name\",\"type\":\"gauge\"}"
+
+```
+

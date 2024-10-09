@@ -77,9 +77,11 @@ func (mem *memStorage) GetCounter(metricName string) (metricValue int64, err err
 
 func (mem *memStorage) GetGauge(metricName string) (metricValue float64, err error) {
 	value, ok := mem.Gauge[metricName]
+	fmt.Println("mem.Gauge: ", mem.Gauge)
 	if ok {
 		return value, nil
 	}
+
 	return -1, ErrMetricNotFound
 }
 
@@ -95,6 +97,7 @@ func (mem *memStorage) UpdateGauge(metricName string, metricValue float64) (err 
 		}
 	}()
 	mem.Gauge[metricName] = metricValue
+	fmt.Println("UpdateGauge mem.Gauge: ", mem.Gauge)
 	if mem.config.StoreInterval == 0 && mem.config.DatabaseDSN != "" {
 		err := mem.writeToDB()
 		if err != nil {
