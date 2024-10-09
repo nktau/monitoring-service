@@ -5,14 +5,13 @@ import (
 	"compress/gzip"
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	psLoad "github.com/shirou/gopsutil/v3/load"
 	psMem "github.com/shirou/gopsutil/v3/mem"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"math/rand"
-	"net/http"
 	"runtime"
 	"sync"
 	"time"
@@ -191,47 +190,58 @@ func (mem *agent) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 
 func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
 	for metrics := range chMetrics {
-		requestBody, err := json.Marshal(metrics)
+		client := resty.New()
+
+		_, err := client.R().SetHeader("Content-Type", "application/json").
+			SetBody(metrics).
+			Post(fmt.Sprintf("%s/updates/", mem.config.ServerURL))
 		if err != nil {
-			mem.logger.Error("can't create request body json", zap.Error(err))
-			return err
+			mem.logger.Error("can't do request", zap.Error(err))
 		}
 
-		compressedRequestBody := mem.compress(requestBody)
-		req, err := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("%s/updates/", mem.config.ServerURL),
-			compressedRequestBody)
-		if err != nil {
-			mem.logger.Error("can't create request",
-				zap.Error(err),
-				zap.String("request body: ", string(requestBody)))
-			return err
-		}
-
-		if mem.config.HashKey != "" {
-			hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
-			req.Header.Set("HashSHA256", hashSHA256)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Encoding", "gzip")
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			mem.logger.Error("can't send metric to the server",
-				zap.Error(err),
-			)
-		} else {
-			err = res.Body.Close()
-			if err != nil {
-				mem.logger.Error("can't close res body", zap.Error(err))
-				return err
-			}
-		}
-
-		err = req.Body.Close()
-		if err != nil {
-			mem.logger.Error("can't close req body", zap.Error(err))
-			return err
-		}
+		//requestBody, err := json.Marshal(metrics)
+		//if err != nil {
+		//	mem.logger.Error("can't create request body json", zap.Error(err))
+		//	return err
+		//}
+		//
+		//compressedRequestBody := mem.compress(requestBody)
+		//req, err := http.NewRequest(http.MethodPost,
+		//	fmt.Sprintf("%s/updates/", mem.config.ServerURL),
+		//	compressedRequestBody)
+		//if err != nil {
+		//	mem.logger.Error("can't create request",
+		//		zap.Error(err),
+		//		zap.String("request body: ", string(requestBody)))
+		//	return err
+		//}
+		//
+		//if mem.config.HashKey != "" {
+		//	hashSHA256 := mem.getSHA256HashString(compressedRequestBody)
+		//	req.Header.Set("HashSHA256", hashSHA256)
+		//}
+		//req.Header.Set("Content-Type", "application/json")
+		//req.Header.Set("Content-Encoding", "gzip")
+		//res, err := http.DefaultClient.Do(req)
+		//if err != nil {
+		//	mem.logger.Error("can't do request")
+		//
+		//	mem.logger.Error("can't send metric to the server",
+		//		zap.Error(err),
+		//	)
+		//} else {
+		//	err = res.Body.Close()
+		//	if err != nil {
+		//		mem.logger.Error("can't close res body", zap.Error(err))
+		//		return err
+		//	}
+		//}
+		//
+		//err = req.Body.Close()
+		//if err != nil {
+		//	mem.logger.Error("can't close req body", zap.Error(err))
+		//	return err
+		//}
 	}
 	return nil
 }
