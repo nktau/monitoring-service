@@ -27,7 +27,7 @@ func (cfg *Config) parseFlags() {
 	flag.IntVar(&cfg.StoreInterval, "i", 4, "interval after which server will write data to disk")
 	flag.StringVar(&cfg.FileStoragePath, "f", "/tmp/metrics-db.json",
 		"path to file in which server will store data")
-	flag.BoolVar(&cfg.Restore, "r", true,
+	flag.BoolVar(&cfg.Restore, "r", false,
 		"if false server will not restore data which it write before restart")
 	flag.StringVar(&cfg.DatabaseDSN, "d", "",
 		"database dsn")
