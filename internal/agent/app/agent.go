@@ -188,9 +188,10 @@ func (mem *agent) CreateMetricsBuffer(chIn chan memStorage) chan []Metrics {
 }
 
 func (mem *agent) makeAndDoRequest(chMetrics chan []Metrics) error {
-	for metrics := range chMetrics {
-		client := resty.New()
+	client := resty.New()
 
+	for metrics := range chMetrics {
+		fmt.Println("metrics", metrics)
 		_, err := client.R().SetHeader("Content-Type", "application/json").
 			SetBody(metrics).
 			Post(fmt.Sprintf("%s/updates/", mem.config.ServerURL))
